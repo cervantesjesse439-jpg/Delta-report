@@ -6,213 +6,269 @@
     <title>Delta Tech - Control de Calidad</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Librerías para generar PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
             -webkit-tap-highlight-color: transparent;
+            /* Fondo cálido pastel premium basado en la referencia */
+            background-image: url('https://images.unsplash.com/photo-1490730141103-6cac27aaab94?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
         }
         
+        /* Capa superpuesta para asegurar legibilidad con estilo Glassmorphism */
+        .bg-overlay {
+            background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.1) 100%);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        /* Utilidad Glassmorphism (Efecto cristal) */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+        }
+        
+        .glass-btn {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            transition: all 0.3s ease;
+        }
+        .glass-btn:hover { background: rgba(255, 255, 255, 0.9); transform: translateY(-1px); }
+
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
         .snap-x-mandatory { scroll-snap-type: x mandatory; }
         .snap-center { scroll-snap-align: center; }
 
-        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        .fade-in { animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         
-        .slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        .slide-up { animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 
-        .option-btn {
-            transition: all 0.2s;
-            border: 2px solid transparent;
-        }
+        .option-btn { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); border: 2px solid transparent; }
         .option-btn.selected {
-            border-color: currentColor;
-            background-color: #f3f4f6;
-            transform: scale(0.98);
+            border-color: #3b82f6; 
+            background: rgba(255, 255, 255, 0.95);
+            transform: scale(0.97);
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.2);
         }
     </style>
 </head>
-<body class="text-gray-800 antialiased h-screen flex flex-col overflow-hidden bg-gray-50 relative">
+<body class="text-gray-800 antialiased h-screen flex flex-col overflow-hidden relative">
+    
+    <!-- Capa base para suavizar el fondo y dar efecto frosted -->
+    <div class="absolute inset-0 bg-white/30 backdrop-blur-md z-0"></div>
+
+    <!-- Modal de Identidad del Inspector (Dinámico por línea) -->
+    <div id="inspector-name-modal" class="fixed inset-0 bg-black/40 backdrop-blur-md z-[100] hidden flex-col items-center justify-center p-6 fade-in">
+        <div class="glass-panel w-full max-w-sm rounded-3xl p-8 flex flex-col items-center text-center relative">
+            <button onclick="closeInspectorModal()" class="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/50 text-gray-600 hover:bg-white transition shadow-sm border border-white">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center text-blue-600 text-3xl mb-4 shadow-sm border border-white">
+                <i class="fas fa-user-tie"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-gray-800 mb-2">Asignar Inspector</h3>
+            <p class="text-gray-600 text-sm mb-6" id="inspector-modal-desc">Ingresa tu nombre para ser el inspector oficial de esta línea hoy.</p>
+            <input type="text" id="inspector-name-input" class="w-full bg-white/80 border border-white rounded-xl px-4 py-3 mb-4 text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-400 shadow-inner" placeholder="Ej. Roberto Martínez">
+            <button onclick="saveInspectorName()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl transition active:scale-95 shadow-lg">
+                Asignarme a la línea
+            </button>
+        </div>
+    </div>
 
     <!-- LOBBY (Pantalla de Inicio) -->
-    <div id="lobby-screen" class="absolute inset-0 bg-gray-100 z-40 flex flex-col items-center justify-center p-6 fade-in overflow-y-auto">
+    <div id="lobby-screen" class="absolute inset-0 z-40 flex flex-col items-center justify-center p-6 fade-in overflow-y-auto">
+        
         <div class="text-center mb-8 mt-4">
-            <div class="w-20 h-20 bg-gray-800 rounded-3xl flex items-center justify-center text-white text-4xl mx-auto mb-3 shadow-lg">
+            <div class="w-24 h-24 glass-panel rounded-3xl flex items-center justify-center text-blue-600 text-4xl mx-auto mb-4 border-2 border-white/70 shadow-lg">
                 <i class="fas fa-industry"></i>
             </div>
-            <h1 class="text-3xl font-bold text-gray-800">Delta Tech</h1>
-            <p class="text-gray-500 font-medium">Control de Calidad</p>
+            <h1 class="text-4xl font-bold text-gray-900 drop-shadow-sm">Delta Tech</h1>
+            <p class="text-gray-700 font-medium mt-1 tracking-wide uppercase text-sm">Control de Calidad</p>
         </div>
 
-        <h2 class="text-lg font-bold text-gray-700 mb-3 w-full max-w-xs text-left">Selecciona la línea:</h2>
+        <h2 class="text-lg font-bold text-gray-800 mb-4 w-full max-w-xs text-left drop-shadow-sm">Selecciona la línea:</h2>
         
         <div class="flex flex-col gap-3 w-full max-w-xs pb-6">
             <!-- Pieza UPR -->
-            <button onclick="selectPiece('UPR')" class="bg-white border-2 border-blue-100 hover:border-blue-500 p-5 rounded-2xl shadow-sm flex items-center justify-between transition active:scale-95 group">
+            <button onclick="selectPiece('UPR')" class="glass-btn p-5 rounded-2xl flex items-center justify-between group shadow-sm">
                 <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-2xl group-hover:bg-blue-600 group-hover:text-white transition">
+                    <div class="w-12 h-12 rounded-full bg-white/80 flex items-center justify-center text-blue-600 text-2xl shadow-inner border border-white">
                         <i class="fas fa-layer-group"></i>
                     </div>
                     <div class="text-left">
-                        <span class="block text-xl font-bold text-gray-800">UPR</span>
-                        <span class="block text-xs text-gray-500 font-medium">Línea Regular</span>
+                        <span class="block text-xl font-bold text-gray-900">UPR</span>
+                        <span class="block text-xs text-gray-600 font-semibold uppercase tracking-wider">Línea Regular</span>
                     </div>
                 </div>
-                <i class="fas fa-chevron-right text-gray-300 group-hover:text-blue-500"></i>
+                <i class="fas fa-chevron-right text-gray-400 group-hover:text-blue-600 transition"></i>
             </button>
 
             <!-- Pieza COWL -->
-            <button onclick="selectPiece('COWL')" class="bg-white border-2 border-indigo-100 hover:border-indigo-500 p-5 rounded-2xl shadow-sm flex items-center justify-between transition active:scale-95 group">
+            <button onclick="selectPiece('COWL')" class="glass-btn p-5 rounded-2xl flex items-center justify-between group shadow-sm">
                 <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-2xl group-hover:bg-indigo-600 group-hover:text-white transition">
+                    <div class="w-12 h-12 rounded-full bg-white/80 flex items-center justify-center text-indigo-600 text-2xl shadow-inner border border-white">
                         <i class="fas fa-shield-alt"></i>
                     </div>
                     <div class="text-left">
-                        <span class="block text-xl font-bold text-gray-800">COWL</span>
-                        <span class="block text-xs text-gray-500 font-medium">Línea Especial</span>
+                        <span class="block text-xl font-bold text-gray-900">COWL</span>
+                        <span class="block text-xs text-gray-600 font-semibold uppercase tracking-wider">Línea Especial</span>
                     </div>
                 </div>
-                <i class="fas fa-chevron-right text-gray-300 group-hover:text-indigo-500"></i>
+                <i class="fas fa-chevron-right text-gray-400 group-hover:text-indigo-600 transition"></i>
             </button>
 
             <!-- Pieza POCKET -->
-            <button onclick="selectPiece('POCKET')" class="bg-white border-2 border-teal-100 hover:border-teal-500 p-5 rounded-2xl shadow-sm flex items-center justify-between transition active:scale-95 group">
+            <button onclick="selectPiece('POCKET')" class="glass-btn p-5 rounded-2xl flex items-center justify-between group shadow-sm">
                 <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 text-2xl group-hover:bg-teal-600 group-hover:text-white transition">
+                    <div class="w-12 h-12 rounded-full bg-white/80 flex items-center justify-center text-teal-600 text-2xl shadow-inner border border-white">
                         <i class="fas fa-cube"></i>
                     </div>
                     <div class="text-left">
-                        <span class="block text-xl font-bold text-gray-800">POCKET</span>
-                        <span class="block text-xs text-gray-500 font-medium">Línea de Cajas</span>
+                        <span class="block text-xl font-bold text-gray-900">POCKET</span>
+                        <span class="block text-xs text-gray-600 font-semibold uppercase tracking-wider">Línea de Cajas</span>
                     </div>
                 </div>
-                <i class="fas fa-chevron-right text-gray-300 group-hover:text-teal-500"></i>
+                <i class="fas fa-chevron-right text-gray-400 group-hover:text-teal-600 transition"></i>
             </button>
 
             <!-- Pieza COVER -->
-            <button onclick="selectPiece('COVER')" class="bg-white border-2 border-emerald-100 hover:border-emerald-500 p-5 rounded-2xl shadow-sm flex items-center justify-between transition active:scale-95 group">
+            <button onclick="selectPiece('COVER')" class="glass-btn p-5 rounded-2xl flex items-center justify-between group shadow-sm">
                 <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 text-2xl group-hover:bg-emerald-600 group-hover:text-white transition">
+                    <div class="w-12 h-12 rounded-full bg-white/80 flex items-center justify-center text-emerald-600 text-2xl shadow-inner border border-white">
                         <i class="fas fa-box"></i>
                     </div>
                     <div class="text-left">
-                        <span class="block text-xl font-bold text-gray-800">COVER</span>
-                        <span class="block text-xs text-gray-500 font-medium">Tarimas / Empaque</span>
+                        <span class="block text-xl font-bold text-gray-900">COVER</span>
+                        <span class="block text-xs text-gray-600 font-semibold uppercase tracking-wider">Tarimas / Empaque</span>
                     </div>
                 </div>
-                <i class="fas fa-chevron-right text-gray-300 group-hover:text-emerald-500"></i>
+                <i class="fas fa-chevron-right text-gray-400 group-hover:text-emerald-600 transition"></i>
             </button>
         </div>
 
         <div class="w-full max-w-xs flex justify-between items-center mb-2">
-            <div id="lobby-cloud-status" class="text-sm font-bold text-gray-400 flex items-center gap-2">
+            <div id="lobby-cloud-status" class="text-sm font-bold text-gray-700 flex items-center gap-2 bg-white/50 px-3 py-1.5 rounded-full backdrop-blur-md shadow-sm border border-white/50">
                 <i class="fas fa-sync fa-spin"></i> Conectando a la nube...
             </div>
         </div>
 
         <div class="w-full max-w-xs flex justify-start">
-            <button id="btn-open-export" onclick="openExportModal()" class="mt-4 mb-8 text-sm bg-white border border-gray-200 text-gray-700 px-4 py-2.5 rounded-xl shadow-sm font-bold hover:bg-gray-50 transition active:scale-95 flex items-center gap-2">
-                <i class="fas fa-file-pdf text-red-600 text-lg"></i> Descargar Reporte PDF
+            <button id="btn-open-export" onclick="openExportModal()" class="mt-4 mb-8 text-sm glass-btn text-gray-800 px-5 py-3 rounded-xl font-bold hover:bg-white/80 transition active:scale-95 flex items-center gap-2 shadow-sm border border-white/60">
+                <i class="fas fa-file-pdf text-red-600 text-lg drop-shadow-sm"></i> Descargar PDF Oficial
             </button>
         </div>
     </div>
 
     <!-- MAIN DASHBOARD -->
-    <div id="main-dashboard" class="flex-1 overflow-y-auto w-full max-w-md mx-auto bg-white shadow-xl relative pb-24 h-full hidden flex-col">
+    <div id="main-dashboard" class="flex-1 overflow-y-auto w-full max-w-md mx-auto glass-panel border-x-0 sm:border-x sm:rounded-none relative pb-24 h-full hidden flex-col z-30">
         
         <!-- Header -->
-        <header id="main-header" class="bg-blue-600 text-white p-5 rounded-b-3xl shadow-md sticky top-0 z-10 transition-colors duration-300">
+        <header id="main-header" class="text-white p-5 rounded-b-[2rem] shadow-lg sticky top-0 z-10 transition-colors duration-300 bg-opacity-90 backdrop-blur-xl border-b border-white/20">
             <div class="flex justify-between items-center mb-2">
                 <div class="flex items-center gap-2">
-                    <button onclick="goBackToLobby()" class="w-8 h-8 flex items-center justify-center rounded-full bg-white bg-opacity-20 hover:bg-opacity-30 transition active:scale-95 mr-1">
+                    <button onclick="goBackToLobby()" class="w-9 h-9 flex items-center justify-center rounded-full bg-black/20 hover:bg-black/30 backdrop-blur-sm transition active:scale-95 mr-1 border border-white/10">
                         <i class="fas fa-arrow-left text-sm"></i>
                     </button>
-                    <i class="fas fa-industry text-xl"></i>
-                    <h1 class="text-xl font-bold tracking-wide">Delta Tech</h1>
+                    <i class="fas fa-industry text-xl drop-shadow"></i>
+                    <h1 class="text-xl font-bold tracking-wide drop-shadow">Delta Tech</h1>
                 </div>
-                <div id="cloud-status" class="flex items-center gap-1 bg-black bg-opacity-20 px-2 py-1 rounded text-xs font-bold" title="Conectando a la nube...">
-                    <i class="fas fa-sync fa-spin"></i> Conectando...
+                
+                <div class="flex items-center gap-2">
+                    <!-- Botón del Inspector Asignado -->
+                    <button onclick="openInspectorModal()" class="flex items-center gap-1.5 bg-black/20 hover:bg-black/30 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs font-bold border border-white/10 shadow-inner transition">
+                        <i class="fas fa-user-tag text-white/80"></i> 
+                        <span id="current-inspector-display" class="truncate max-w-[80px]">Buscando...</span>
+                    </button>
+                    <div id="cloud-status" class="flex items-center justify-center w-7 h-7 bg-black/30 backdrop-blur-sm rounded-full text-xs font-bold shadow-inner border border-white/10" title="Conectando a la nube...">
+                        <i class="fas fa-sync fa-spin"></i>
+                    </div>
                 </div>
             </div>
-            <p class="text-white text-opacity-80 text-sm font-medium" id="current-date-display">Cargando fecha...</p>
-            <h2 class="text-2xl font-bold mt-1">Control - <span id="header-piece-name">UPR</span></h2>
+            <p class="text-white/90 text-sm font-medium drop-shadow-sm mt-1" id="current-date-display">Cargando fecha...</p>
+            <h2 class="text-3xl font-black mt-1 drop-shadow-md">Control - <span id="header-piece-name">UPR</span></h2>
         </header>
 
         <main class="p-4 flex-1">
-            <div class="flex justify-between items-center mb-3 text-gray-700">
-                <h3 class="text-lg font-bold">Resumen de Hoy</h3>
-                <button onclick="openReportModal()" class="text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded-full font-bold shadow-sm hover:bg-gray-200 transition active:scale-95 flex items-center gap-1">
-                    <i class="fas fa-chart-pie"></i> Reporte
+            <div class="flex justify-between items-center mb-4 text-gray-900 mt-2">
+                <h3 class="text-xl font-bold drop-shadow-sm">Resumen de Hoy</h3>
+                <button onclick="openReportModal()" class="text-xs glass-btn text-gray-800 px-4 py-2 rounded-full font-bold shadow-sm flex items-center gap-2 active:scale-95 border border-white">
+                    <i class="fas fa-chart-pie text-blue-600"></i> Reporte
                 </button>
             </div>
             
-            <div class="grid grid-cols-2 gap-3 mb-6" id="dashboard-stats-container">
+            <div class="grid grid-cols-2 gap-3 mb-8" id="dashboard-stats-container">
                 <!-- Tarjeta Piezas (UPR/COWL/POCKET) -->
-                <div id="stat-card-piezas" onclick="openReportModal()" class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center relative overflow-hidden cursor-pointer hover:bg-gray-50 transition active:scale-95">
-                    <div class="absolute top-0 w-full h-1 bg-red-400"></div>
-                    <i class="fas fa-puzzle-piece text-red-400 text-2xl mb-2"></i>
-                    <span class="text-3xl font-bold text-gray-800" id="stat-piezas-total">0</span>
-                    <span class="text-xs text-gray-500 uppercase font-semibold">Piezas</span>
-                    <div class="flex w-full justify-between mt-2 text-xs font-medium px-2 gap-2">
-                        <span class="text-blue-600 bg-blue-50 px-2 py-1 rounded">RH: <span id="stat-piezas-rh">0</span></span>
-                        <span class="text-green-600 bg-green-50 px-2 py-1 rounded">LH: <span id="stat-piezas-lh">0</span></span>
+                <div id="stat-card-piezas" onclick="openReportModal()" class="glass-btn p-4 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden cursor-pointer active:scale-95 border border-white">
+                    <div class="absolute top-0 w-full h-1.5 bg-red-400 opacity-80"></div>
+                    <i class="fas fa-puzzle-piece text-red-500 text-2xl mb-2 drop-shadow-sm"></i>
+                    <span class="text-4xl font-black text-gray-900 drop-shadow-sm" id="stat-piezas-total">0</span>
+                    <span class="text-[10px] text-gray-600 uppercase font-bold tracking-wider mt-1">Piezas</span>
+                    <div class="flex w-full justify-between mt-3 text-[11px] font-bold px-1 gap-2">
+                        <span class="text-blue-700 bg-blue-100/80 backdrop-blur-sm px-2 py-1 rounded border border-blue-200">RH: <span id="stat-piezas-rh">0</span></span>
+                        <span class="text-green-700 bg-green-100/80 backdrop-blur-sm px-2 py-1 rounded border border-green-200">LH: <span id="stat-piezas-lh">0</span></span>
                     </div>
                 </div>
 
                 <!-- Tarjeta Carros (UPR) -->
-                <div id="stat-card-carros" onclick="openReportModal()" class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center relative overflow-hidden cursor-pointer hover:bg-gray-50 transition active:scale-95">
-                    <div class="absolute top-0 w-full h-1 bg-purple-400"></div>
-                    <i class="fas fa-truck text-purple-400 text-2xl mb-2"></i>
-                    <span class="text-3xl font-bold text-gray-800" id="stat-carros-total">0</span>
-                    <span class="text-xs text-gray-500 uppercase font-semibold">Carros</span>
-                    <div class="flex flex-col w-full mt-2 text-xs font-medium gap-1">
-                        <span class="text-gray-600 bg-gray-50 px-2 py-1 rounded flex justify-between"><span>Normal:</span> <span id="stat-carros-normal">0</span></span>
-                        <span class="text-gray-600 bg-gray-50 px-2 py-1 rounded flex justify-between"><span>Grande:</span> <span id="stat-carros-grande">0</span></span>
+                <div id="stat-card-carros" onclick="openReportModal()" class="glass-btn p-4 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden cursor-pointer active:scale-95 border border-white">
+                    <div class="absolute top-0 w-full h-1.5 bg-purple-400 opacity-80"></div>
+                    <i class="fas fa-truck text-purple-500 text-2xl mb-2 drop-shadow-sm"></i>
+                    <span class="text-4xl font-black text-gray-900 drop-shadow-sm" id="stat-carros-total">0</span>
+                    <span class="text-[10px] text-gray-600 uppercase font-bold tracking-wider mt-1">Carros</span>
+                    <div class="flex flex-col w-full mt-3 text-[11px] font-bold gap-1.5">
+                        <span class="text-gray-800 bg-white/70 backdrop-blur-sm px-2 py-1 rounded flex justify-between border border-white shadow-sm"><span>Venta:</span> <span id="stat-carros-venta">0</span></span>
+                        <span class="text-gray-800 bg-white/70 backdrop-blur-sm px-2 py-1 rounded flex justify-between border border-white shadow-sm"><span>Inyección:</span> <span id="stat-carros-inyeccion">0</span></span>
                     </div>
                 </div>
 
                 <!-- Tarjeta Cajas (POCKET) -->
-                <div id="stat-card-cajas" onclick="openReportModal()" class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex-col items-center justify-center relative overflow-hidden cursor-pointer hover:bg-gray-50 transition active:scale-95 hidden">
-                    <div class="absolute top-0 w-full h-1 bg-teal-400"></div>
-                    <i class="fas fa-box-open text-teal-400 text-2xl mb-2"></i>
-                    <span class="text-3xl font-bold text-gray-800" id="stat-cajas-total">0</span>
-                    <span class="text-xs text-gray-500 uppercase font-semibold">Cajas</span>
-                    <div class="flex flex-col w-full mt-2 text-xs font-medium gap-1">
-                        <span class="text-gray-600 bg-gray-50 px-2 py-1 rounded flex justify-between"><span>Caja:</span> <span id="stat-cajas-normal">0</span></span>
-                        <span class="text-gray-600 bg-gray-50 px-2 py-1 rounded flex justify-between"><span>Grande:</span> <span id="stat-cajas-grande">0</span></span>
+                <div id="stat-card-cajas" onclick="openReportModal()" class="glass-btn p-4 rounded-2xl flex-col items-center justify-center relative overflow-hidden cursor-pointer active:scale-95 hidden border border-white">
+                    <div class="absolute top-0 w-full h-1.5 bg-teal-400 opacity-80"></div>
+                    <i class="fas fa-box-open text-teal-500 text-2xl mb-2 drop-shadow-sm"></i>
+                    <span class="text-4xl font-black text-gray-900 drop-shadow-sm" id="stat-cajas-total">0</span>
+                    <span class="text-[10px] text-gray-600 uppercase font-bold tracking-wider mt-1">Cajas</span>
+                    <div class="flex flex-col w-full mt-3 text-[11px] font-bold gap-1.5">
+                        <span class="text-gray-800 bg-white/70 backdrop-blur-sm px-2 py-1 rounded flex justify-between border border-white shadow-sm"><span>Caja:</span> <span id="stat-cajas-normal">0</span></span>
+                        <span class="text-gray-800 bg-white/70 backdrop-blur-sm px-2 py-1 rounded flex justify-between border border-white shadow-sm"><span>Grande:</span> <span id="stat-cajas-grande">0</span></span>
                     </div>
                 </div>
                 
                 <!-- Tarjeta Tarimas (Solo COVER) -->
-                <div id="stat-card-tarimas" onclick="openReportModal()" class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center relative overflow-hidden cursor-pointer hover:bg-gray-50 transition active:scale-95 col-span-2 hidden">
-                    <div class="absolute top-0 w-full h-1 bg-emerald-400"></div>
-                    <i class="fas fa-pallet text-emerald-500 text-3xl mb-2"></i>
-                    <span class="text-4xl font-bold text-gray-800" id="stat-tarimas-total">0</span>
-                    <span class="text-sm text-gray-500 uppercase font-semibold mt-1">Tarimas Revisadas</span>
-                    <span class="text-xs text-red-600 bg-red-50 px-3 py-1 rounded mt-2 font-bold"><i class="fas fa-times-circle"></i> Piezas Rechazadas: <span id="stat-cover-rechazos">0</span></span>
+                <div id="stat-card-tarimas" onclick="openReportModal()" class="glass-btn p-5 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden cursor-pointer active:scale-95 col-span-2 hidden border border-white">
+                    <div class="absolute top-0 w-full h-1.5 bg-emerald-400 opacity-80"></div>
+                    <i class="fas fa-pallet text-emerald-600 text-3xl mb-2 drop-shadow-sm"></i>
+                    <span class="text-5xl font-black text-gray-900 drop-shadow-sm" id="stat-tarimas-total">0</span>
+                    <span class="text-xs text-gray-600 uppercase font-bold tracking-widest mt-2">Tarimas Revisadas</span>
+                    <span class="text-xs text-red-700 bg-red-100/90 border border-red-200 backdrop-blur-sm px-4 py-1.5 rounded-full mt-3 font-bold shadow-sm"><i class="fas fa-times-circle"></i> Piezas Rechazadas: <span id="stat-cover-rechazos">0</span></span>
                 </div>
             </div>
 
-            <div class="flex justify-between items-end mb-3 mt-8">
-                <h3 class="text-lg font-bold text-gray-700">Bitácora del Equipo</h3>
+            <div class="flex justify-between items-end mb-3 mt-4">
+                <h3 class="text-xl font-bold text-gray-900 drop-shadow-sm">Bitácora del Equipo</h3>
                 <div id="normal-actions">
-                    <button onclick="toggleDeleteMode()" class="text-xs text-red-500 bg-red-50 px-3 py-1.5 rounded-full border border-red-200 font-medium transition active:scale-95">
+                    <button onclick="toggleDeleteMode()" class="text-xs text-red-600 bg-white/60 backdrop-blur-sm px-4 py-2 rounded-full border border-red-200/50 font-bold shadow-sm active:scale-95">
                         <i class="fas fa-list-check"></i> Seleccionar
                     </button>
                 </div>
                 <div id="delete-actions" class="hidden gap-2">
-                    <button onclick="toggleDeleteMode()" class="text-xs text-gray-600 bg-gray-100 px-3 py-1.5 rounded-full border border-gray-200 font-medium transition active:scale-95">
+                    <button onclick="toggleDeleteMode()" class="text-xs text-gray-700 glass-btn px-4 py-2 rounded-full font-bold active:scale-95 border border-white">
                         Cancelar
                     </button>
-                    <button onclick="confirmDeletion()" id="btn-confirm-delete" class="text-xs text-white bg-red-500 px-3 py-1.5 rounded-full shadow font-medium opacity-50 pointer-events-none transition active:scale-95">
+                    <button onclick="confirmDeletion()" id="btn-confirm-delete" class="text-xs text-white bg-red-500/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-md font-bold opacity-50 pointer-events-none active:scale-95 border border-red-400">
                         <i class="fas fa-trash"></i> Borrar (0)
                     </button>
                 </div>
@@ -225,300 +281,315 @@
     </div>
 
     <!-- Botón Flotante Registrar -->
-    <div id="btn-registrar-container" class="fixed bottom-0 w-full max-w-md left-1/2 transform -translate-x-1/2 p-4 bg-gradient-to-t from-gray-100 via-gray-100 to-transparent pb-6 z-20 hidden">
-        <button id="btn-open-wizard" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-2xl shadow-lg transform transition active:scale-95 flex items-center justify-center gap-3 text-lg transition-colors duration-300">
-            <i class="fas fa-plus-circle text-2xl"></i>
+    <div id="btn-registrar-container" class="fixed bottom-0 w-full max-w-md left-1/2 transform -translate-x-1/2 p-4 bg-gradient-to-t from-white/90 via-white/60 to-transparent pb-6 z-40 hidden backdrop-blur-[2px]">
+        <button id="btn-open-wizard" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-2xl shadow-xl transform transition active:scale-95 flex items-center justify-center gap-3 text-lg border border-blue-500 backdrop-blur-sm">
+            <i class="fas fa-plus-circle text-2xl drop-shadow-sm"></i>
             Registrar Rechazo
         </button>
     </div>
 
-    <!-- WIZARD MODAL -->
-    <div id="wizard-modal" class="fixed inset-0 bg-black bg-opacity-60 z-50 hidden flex-col justify-end fade-in">
-        <div class="bg-white w-full max-w-md mx-auto rounded-t-3xl h-[85vh] flex flex-col slide-up relative">
+    <!-- WIZARD MODAL (Registro) -->
+    <div id="wizard-modal" class="fixed inset-0 bg-black/50 backdrop-blur-md z-50 hidden flex-col justify-end fade-in">
+        <div class="glass-panel w-full max-w-md mx-auto rounded-t-[2.5rem] h-[88vh] flex flex-col slide-up relative overflow-hidden bg-white/85">
             
-            <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-white rounded-t-3xl z-10 shadow-sm">
+            <div class="p-6 border-b border-white/50 flex justify-between items-center bg-white/50 backdrop-blur-xl z-10 shadow-sm">
                 <div>
-                    <h3 class="text-xl font-bold text-gray-800">Nuevo Registro <span id="wizard-piece-badge" class="bg-gray-100 text-xs px-2 py-1 rounded ml-1 text-gray-600"></span></h3>
-                    <p class="text-sm text-gray-500" id="wizard-step-text">Paso 1: Selecciona Lado</p>
+                    <h3 class="text-2xl font-black text-gray-900 drop-shadow-sm">Nuevo Registro <span id="wizard-piece-badge" class="bg-black/10 text-xs px-2 py-1 rounded-md ml-1 text-gray-800 font-bold border border-white/50"></span></h3>
+                    <p class="text-sm font-bold text-gray-600 mt-1" id="wizard-step-text">Paso 1: Selecciona Lado</p>
                 </div>
-                <button id="btn-close-wizard" class="w-10 h-10 bg-gray-100 rounded-full text-gray-600 hover:bg-gray-200 flex items-center justify-center transition">
-                    <i class="fas fa-times"></i>
+                <button id="btn-close-wizard" class="w-10 h-10 bg-white/60 rounded-full text-gray-700 hover:bg-white flex items-center justify-center transition shadow-sm border border-white">
+                    <i class="fas fa-times text-lg"></i>
                 </button>
             </div>
 
-            <div class="flex-1 overflow-hidden relative bg-gray-50">
-                <div class="flex w-full h-1 bg-gray-200 absolute top-0 left-0 z-10">
-                    <div id="wizard-progress" class="h-full bg-blue-600 transition-all duration-300" style="width: 16.66%"></div>
+            <div class="flex-1 overflow-hidden relative">
+                <div class="flex w-full h-1.5 bg-black/5 absolute top-0 left-0 z-10">
+                    <div id="wizard-progress" class="h-full bg-blue-500 transition-all duration-300 shadow-[0_0_10px_rgba(59,130,246,0.8)]" style="width: 16.66%"></div>
                 </div>
 
                 <div id="wizard-slider" class="w-full h-full flex overflow-x-auto snap-x-mandatory hide-scrollbar scroll-smooth">
                     
                     <!-- PASO 1: Lado -->
                     <div class="min-w-full flex flex-col items-center justify-center p-6 snap-center" id="step-1">
-                        <h4 class="text-2xl font-bold mb-8 text-gray-700 text-center">Lado / Orientación</h4>
+                        <h4 class="text-3xl font-black mb-10 text-gray-900 text-center drop-shadow-sm">Lado / Orientación</h4>
                         <div class="grid grid-cols-2 gap-4 w-full">
-                            <button class="option-btn bg-white p-8 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-4 text-blue-600" onclick="selectOption('side', 'RH', 2)">
-                                <div class="w-20 h-20 rounded-full bg-blue-50 flex items-center justify-center text-3xl font-bold border border-blue-100">R</div>
-                                <span class="text-xl font-bold text-gray-800">RH</span>
-                                <span class="text-sm text-gray-500">Derecho</span>
+                            <button class="option-btn glass-btn p-8 rounded-3xl shadow-sm flex flex-col items-center justify-center gap-4 text-blue-700 border border-white" onclick="selectOption('side', 'RH', 2)">
+                                <div class="w-20 h-20 rounded-full bg-white/90 flex items-center justify-center text-3xl font-black shadow-inner border border-blue-100">R</div>
+                                <span class="text-2xl font-bold text-gray-900">RH</span>
+                                <span class="text-sm font-bold text-gray-500 uppercase tracking-widest">Derecho</span>
                             </button>
-                            <button class="option-btn bg-white p-8 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-4 text-green-600" onclick="selectOption('side', 'LH', 2)">
-                                <div class="w-20 h-20 rounded-full bg-green-50 flex items-center justify-center text-3xl font-bold border border-green-100">L</div>
-                                <span class="text-xl font-bold text-gray-800">LH</span>
-                                <span class="text-sm text-gray-500">Izquierdo</span>
+                            <button class="option-btn glass-btn p-8 rounded-3xl shadow-sm flex flex-col items-center justify-center gap-4 text-green-700 border border-white" onclick="selectOption('side', 'LH', 2)">
+                                <div class="w-20 h-20 rounded-full bg-white/90 flex items-center justify-center text-3xl font-black shadow-inner border border-green-100">L</div>
+                                <span class="text-2xl font-bold text-gray-900">LH</span>
+                                <span class="text-sm font-bold text-gray-500 uppercase tracking-widest">Izquierdo</span>
                             </button>
-                            <!-- Opción N/A (Oculta en COVER) -->
-                            <button class="option-btn na-option bg-white p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-2 col-span-2 text-gray-600" onclick="selectOption('side', 'N/A', 2)">
-                                <span class="font-bold text-gray-800">No Aplica (N/A)</span>
+                            <button class="option-btn na-option glass-btn p-5 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-2 col-span-2 text-gray-600 mt-2 border border-white" onclick="selectOption('side', 'N/A', 2)">
+                                <span class="font-bold text-lg text-gray-800">No Aplica (N/A)</span>
                             </button>
                         </div>
                     </div>
 
                     <!-- PASO 2: Daño -->
                     <div class="min-w-full flex flex-col items-center justify-start p-6 snap-center overflow-y-auto pb-12" id="step-2">
-                        <h4 class="text-2xl font-bold mb-6 text-gray-700 text-center flex-shrink-0">Tipo de Daño</h4>
+                        <h4 class="text-2xl font-black mb-6 text-gray-900 text-center flex-shrink-0 drop-shadow-sm">Tipo de Daño</h4>
                         <div class="grid grid-cols-2 gap-3 w-full pb-8">
                             
                             <!-- Daños base -->
-                            <button class="option-btn dmg-btn upr-dmg cowl-dmg pocket-dmg bg-white p-4 rounded-xl shadow-sm flex flex-col items-center justify-center gap-2" onclick="selectOption('damage', 'Ráfaga', 3)">
-                                <i class="fas fa-wind text-2xl text-blue-400"></i><span class="font-bold text-gray-800 text-sm text-center">Ráfaga</span>
+                            <button class="option-btn dmg-btn upr-dmg cowl-dmg pocket-dmg glass-btn p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 border border-white" onclick="selectOption('damage', 'Ráfaga', 3)">
+                                <div class="w-12 h-12 bg-white/80 rounded-full flex items-center justify-center shadow-inner border border-gray-100"><i class="fas fa-wind text-2xl text-blue-500"></i></div>
+                                <span class="font-bold text-gray-900 text-sm text-center">Ráfaga</span>
                             </button>
-                            <button class="option-btn dmg-btn upr-dmg cowl-dmg bg-white p-4 rounded-xl shadow-sm flex flex-col items-center justify-center gap-2" onclick="selectOption('damage', 'Golpe', 3)">
-                                <i class="fas fa-hammer text-2xl text-red-600"></i><span class="font-bold text-gray-800 text-sm text-center">Golpe</span>
+                            <button class="option-btn dmg-btn upr-dmg cowl-dmg glass-btn p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 border border-white" onclick="selectOption('damage', 'Golpe', 3)">
+                                <div class="w-12 h-12 bg-white/80 rounded-full flex items-center justify-center shadow-inner border border-gray-100"><i class="fas fa-hammer text-2xl text-red-600"></i></div>
+                                <span class="font-bold text-gray-900 text-sm text-center">Golpe</span>
                             </button>
-                            <button class="option-btn dmg-btn upr-dmg cowl-dmg pocket-dmg bg-white p-4 rounded-xl shadow-sm flex flex-col items-center justify-center gap-2" onclick="selectOption('damage', 'Rayón', 3)">
-                                <i class="fas fa-slash text-2xl text-gray-600"></i><span class="font-bold text-gray-800 text-sm text-center">Rayón</span>
+                            <button class="option-btn dmg-btn upr-dmg cowl-dmg pocket-dmg glass-btn p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 border border-white" onclick="selectOption('damage', 'Rayón', 3)">
+                                <div class="w-12 h-12 bg-white/80 rounded-full flex items-center justify-center shadow-inner border border-gray-100"><i class="fas fa-slash text-2xl text-gray-600"></i></div>
+                                <span class="font-bold text-gray-900 text-sm text-center">Rayón</span>
                             </button>
-                            <button class="option-btn dmg-btn upr-dmg pocket-dmg cover-dmg bg-white p-4 rounded-xl shadow-sm flex flex-col items-center justify-center gap-2" onclick="selectOption('damage', 'Rebaba', 3)">
-                                <i class="fas fa-cut text-2xl text-orange-400"></i><span class="font-bold text-gray-800 text-sm text-center">Rebaba</span>
+                            <button class="option-btn dmg-btn upr-dmg pocket-dmg cover-dmg glass-btn p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 border border-white" onclick="selectOption('damage', 'Rebaba', 3)">
+                                <div class="w-12 h-12 bg-white/80 rounded-full flex items-center justify-center shadow-inner border border-gray-100"><i class="fas fa-cut text-2xl text-orange-500"></i></div>
+                                <span class="font-bold text-gray-900 text-sm text-center">Rebaba</span>
                             </button>
-                            <button class="option-btn dmg-btn upr-dmg pocket-dmg cover-dmg bg-white p-4 rounded-xl shadow-sm flex flex-col items-center justify-center gap-2" onclick="selectOption('damage', 'Contaminación', 3)">
-                                <i class="fas fa-biohazard text-2xl text-green-600"></i><span class="font-bold text-gray-800 text-sm text-center">Contaminación</span>
+                            <button class="option-btn dmg-btn upr-dmg pocket-dmg cover-dmg glass-btn p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 border border-white" onclick="selectOption('damage', 'Contaminación', 3)">
+                                <div class="w-12 h-12 bg-white/80 rounded-full flex items-center justify-center shadow-inner border border-gray-100"><i class="fas fa-biohazard text-2xl text-green-600"></i></div>
+                                <span class="font-bold text-gray-900 text-sm text-center">Contaminación</span>
                             </button>
-                            <button class="option-btn dmg-btn upr-dmg cowl-dmg pocket-dmg bg-white p-4 rounded-xl shadow-sm flex flex-col items-center justify-center gap-2" onclick="selectOption('damage', 'Mal Retrabajo', 3)">
-                                <i class="fas fa-tools text-2xl text-purple-600"></i><span class="font-bold text-gray-800 text-sm text-center">Mal Retrabajo</span>
+                            <button class="option-btn dmg-btn upr-dmg cowl-dmg pocket-dmg glass-btn p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 border border-white" onclick="selectOption('damage', 'Mal Retrabajo', 3)">
+                                <div class="w-12 h-12 bg-white/80 rounded-full flex items-center justify-center shadow-inner border border-gray-100"><i class="fas fa-tools text-2xl text-purple-600"></i></div>
+                                <span class="font-bold text-gray-900 text-sm text-center">Mal Retrabajo</span>
                             </button>
-                            <button class="option-btn dmg-btn upr-dmg cowl-dmg pocket-dmg bg-white p-4 rounded-xl shadow-sm flex flex-col items-center justify-center gap-2" onclick="selectOption('damage', 'Tiro corto', 3)">
-                                <i class="fas fa-compress text-2xl text-red-500"></i><span class="font-bold text-gray-800 text-sm text-center">Tiro corto</span>
+                            <button class="option-btn dmg-btn upr-dmg cowl-dmg pocket-dmg glass-btn p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 border border-white" onclick="selectOption('damage', 'Tiro corto', 3)">
+                                <div class="w-12 h-12 bg-white/80 rounded-full flex items-center justify-center shadow-inner border border-gray-100"><i class="fas fa-compress text-2xl text-red-500"></i></div>
+                                <span class="font-bold text-gray-900 text-sm text-center">Tiro corto</span>
                             </button>
-                            <button class="option-btn dmg-btn upr-dmg cowl-dmg pocket-dmg bg-white p-4 rounded-xl shadow-sm flex flex-col items-center justify-center gap-2" onclick="selectOption('damage', 'Poste fracturado', 3)">
-                                <i class="fas fa-cube text-2xl text-purple-500"></i><span class="font-bold text-gray-800 text-sm text-center">Poste fracturado</span>
+                            <button class="option-btn dmg-btn upr-dmg cowl-dmg pocket-dmg glass-btn p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 border border-white" onclick="selectOption('damage', 'Poste fracturado', 3)">
+                                <div class="w-12 h-12 bg-white/80 rounded-full flex items-center justify-center shadow-inner border border-gray-100"><i class="fas fa-cube text-2xl text-purple-500"></i></div>
+                                <span class="font-bold text-gray-900 text-sm text-center">Poste fracturado</span>
                             </button>
-                            <button class="option-btn dmg-btn upr-dmg cowl-dmg pocket-dmg bg-white p-4 rounded-xl shadow-sm flex flex-col items-center justify-center gap-2" onclick="selectOption('damage', 'Burbuja', 3)">
-                                <i class="fas fa-droplet text-2xl text-blue-400"></i><span class="font-bold text-gray-800 text-sm text-center">Burbuja</span>
+                            <button class="option-btn dmg-btn upr-dmg cowl-dmg pocket-dmg glass-btn p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 border border-white" onclick="selectOption('damage', 'Burbuja', 3)">
+                                <div class="w-12 h-12 bg-white/80 rounded-full flex items-center justify-center shadow-inner border border-gray-100"><i class="fas fa-droplet text-2xl text-blue-500"></i></div>
+                                <span class="font-bold text-gray-900 text-sm text-center">Burbuja</span>
                             </button>
                             
                             <!-- Sin Etiqueta GLOBAL -->
-                            <button class="option-btn dmg-btn upr-dmg cowl-dmg pocket-dmg cover-dmg bg-white p-4 rounded-xl shadow-sm flex flex-col items-center justify-center gap-2" onclick="selectOption('damage', 'Sin etiqueta', 3)">
-                                <i class="fas fa-tag text-2xl text-orange-500"></i><span class="font-bold text-gray-800 text-sm text-center">Sin etiqueta</span>
+                            <button class="option-btn dmg-btn upr-dmg cowl-dmg pocket-dmg cover-dmg glass-btn p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 border border-white" onclick="selectOption('damage', 'Sin etiqueta', 3)">
+                                <div class="w-12 h-12 bg-white/80 rounded-full flex items-center justify-center shadow-inner border border-gray-100"><i class="fas fa-tag text-2xl text-orange-600"></i></div>
+                                <span class="font-bold text-gray-900 text-sm text-center">Sin etiqueta</span>
                             </button>
                             
                             <!-- Exclusivos UPR -->
-                            <button class="option-btn dmg-btn upr-dmg bg-white p-4 rounded-xl shadow-sm flex flex-col items-center justify-center gap-2" onclick="selectOption('damage', 'Exceso de brillo', 3)">
-                                <i class="fas fa-sun text-2xl text-yellow-500"></i><span class="font-bold text-gray-800 text-sm text-center">Exceso de brillo</span>
+                            <button class="option-btn dmg-btn upr-dmg glass-btn p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 border border-white" onclick="selectOption('damage', 'Exceso de brillo', 3)">
+                                <div class="w-12 h-12 bg-white/80 rounded-full flex items-center justify-center shadow-inner border border-gray-100"><i class="fas fa-sun text-2xl text-yellow-500"></i></div>
+                                <span class="font-bold text-gray-900 text-sm text-center">Exceso de brillo</span>
                             </button>
-                            <button class="option-btn dmg-btn upr-dmg bg-white p-4 rounded-xl shadow-sm flex flex-col items-center justify-center gap-2" onclick="selectOption('damage', 'Traspaso de soldadura', 3)">
-                                <i class="fas fa-bolt text-2xl text-yellow-600"></i><span class="font-bold text-gray-800 text-sm text-center">Traspaso de soldadura</span>
+                            <button class="option-btn dmg-btn upr-dmg glass-btn p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 border border-white" onclick="selectOption('damage', 'Traspaso de soldadura', 3)">
+                                <div class="w-12 h-12 bg-white/80 rounded-full flex items-center justify-center shadow-inner border border-gray-100"><i class="fas fa-bolt text-2xl text-yellow-600"></i></div>
+                                <span class="font-bold text-gray-900 text-sm text-center">Traspaso de soldadura</span>
                             </button>
 
                             <!-- Exclusivos COWL -->
-                            <button class="option-btn dmg-btn cowl-dmg bg-white p-4 rounded-xl shadow-sm flex flex-col items-center justify-center gap-2" onclick="selectOption('damage', 'Tornillo', 3)">
-                                <i class="fas fa-screw text-2xl text-gray-600"></i><span class="font-bold text-gray-800 text-sm text-center">Tornillo</span>
+                            <button class="option-btn dmg-btn cowl-dmg glass-btn p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 border border-white" onclick="selectOption('damage', 'Tornillo', 3)">
+                                <div class="w-12 h-12 bg-white/80 rounded-full flex items-center justify-center shadow-inner border border-gray-100"><i class="fas fa-screw text-2xl text-gray-700"></i></div>
+                                <span class="font-bold text-gray-900 text-sm text-center">Tornillo</span>
                             </button>
-                            <button class="option-btn dmg-btn cowl-dmg bg-white p-4 rounded-xl shadow-sm flex flex-col items-center justify-center gap-2" onclick="selectOption('damage', 'Falta de torque', 3)">
-                                <i class="fas fa-wrench text-2xl text-orange-600"></i><span class="font-bold text-gray-800 text-sm text-center">Falta de torque</span>
+                            <button class="option-btn dmg-btn cowl-dmg glass-btn p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 border border-white" onclick="selectOption('damage', 'Falta de torque', 3)">
+                                <div class="w-12 h-12 bg-white/80 rounded-full flex items-center justify-center shadow-inner border border-gray-100"><i class="fas fa-wrench text-2xl text-orange-700"></i></div>
+                                <span class="font-bold text-gray-900 text-sm text-center">Falta de torque</span>
                             </button>
-                            <button class="option-btn dmg-btn cowl-dmg bg-white p-4 rounded-xl shadow-sm flex flex-col items-center justify-center gap-2" onclick="selectOption('damage', 'Marca de molde', 3)">
-                                <i class="fas fa-stamp text-2xl text-teal-600"></i><span class="font-bold text-gray-800 text-sm text-center">Marca de molde</span>
+                            <button class="option-btn dmg-btn cowl-dmg glass-btn p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 border border-white" onclick="selectOption('damage', 'Marca de molde', 3)">
+                                <div class="w-12 h-12 bg-white/80 rounded-full flex items-center justify-center shadow-inner border border-gray-100"><i class="fas fa-stamp text-2xl text-teal-600"></i></div>
+                                <span class="font-bold text-gray-900 text-sm text-center">Marca de molde</span>
                             </button>
 
                             <!-- Exclusivos COVER -->
-                            <button class="option-btn dmg-btn cover-dmg bg-white p-4 rounded-xl shadow-sm flex flex-col items-center justify-center gap-2" onclick="selectOption('damage', 'Sin componentes', 3)">
-                                <i class="fas fa-box-open text-2xl text-red-500"></i><span class="font-bold text-gray-800 text-sm text-center">Sin componentes</span>
+                            <button class="option-btn dmg-btn cover-dmg glass-btn p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 border border-white" onclick="selectOption('damage', 'Sin componentes', 3)">
+                                <div class="w-12 h-12 bg-white/80 rounded-full flex items-center justify-center shadow-inner border border-gray-100"><i class="fas fa-box-open text-2xl text-red-500"></i></div>
+                                <span class="font-bold text-gray-900 text-sm text-center">Sin componentes</span>
                             </button>
                         </div>
                     </div>
 
-                    <!-- PASO 3: Variante (Color / Tamaño) - Oculto en COWL y COVER -->
+                    <!-- PASO 3: Variante -->
                     <div class="min-w-full flex flex-col items-center justify-center p-6 snap-center" id="step-3">
-                        <h4 class="text-2xl font-bold mb-8 text-gray-700 text-center" id="step-3-title">Variante</h4>
+                        <h4 class="text-3xl font-black mb-8 text-gray-900 text-center drop-shadow-sm" id="step-3-title">Variante</h4>
                         <div class="grid grid-cols-2 gap-4 w-full">
                             
-                            <!-- Colores Exclusivos UPR -->
-                            <button class="option-btn bg-white p-6 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 text-gray-800 color-upr" onclick="selectOption('variant', 'Negro', 4)">
-                                <div class="w-12 h-12 rounded-full bg-gray-900 shadow-inner"></div>
-                                <span class="text-lg font-bold">Negro</span>
+                            <!-- Colores UPR -->
+                            <button class="option-btn glass-btn p-6 rounded-3xl shadow-sm flex flex-col items-center justify-center gap-4 text-gray-900 color-upr border border-white" onclick="selectOption('variant', 'Negro', 4)">
+                                <div class="w-16 h-16 rounded-full bg-gray-900 shadow-lg border-2 border-white/50"></div>
+                                <span class="text-xl font-bold">Negro</span>
                             </button>
-                            <button class="option-btn bg-white p-6 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 text-gray-800 color-upr" onclick="selectOption('variant', 'Gris', 4)">
-                                <div class="w-12 h-12 rounded-full bg-gray-400 shadow-inner"></div>
-                                <span class="text-lg font-bold">Gris</span>
+                            <button class="option-btn glass-btn p-6 rounded-3xl shadow-sm flex flex-col items-center justify-center gap-4 text-gray-900 color-upr border border-white" onclick="selectOption('variant', 'Gris', 4)">
+                                <div class="w-16 h-16 rounded-full bg-gray-400 shadow-lg border-2 border-white/50"></div>
+                                <span class="text-xl font-bold">Gris</span>
                             </button>
-                            <button class="option-btn bg-white p-6 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 text-gray-800 color-upr" onclick="selectOption('variant', 'Café', 4)">
-                                <div class="w-12 h-12 rounded-full bg-amber-800 shadow-inner"></div>
-                                <span class="text-lg font-bold">Café</span>
+                            <button class="option-btn glass-btn p-6 rounded-3xl shadow-sm flex flex-col items-center justify-center gap-4 text-gray-900 color-upr border border-white" onclick="selectOption('variant', 'Café', 4)">
+                                <div class="w-16 h-16 rounded-full bg-[#5C4033] shadow-lg border-2 border-white/50"></div>
+                                <span class="text-xl font-bold">Café</span>
                             </button>
-                            <button class="option-btn bg-white p-6 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 text-gray-800 color-upr" onclick="selectOption('variant', 'Verde', 4)">
-                                <div class="w-12 h-12 rounded-full bg-green-700 shadow-inner"></div>
-                                <span class="text-lg font-bold">Verde</span>
+                            <button class="option-btn glass-btn p-6 rounded-3xl shadow-sm flex flex-col items-center justify-center gap-4 text-gray-900 color-upr border border-white" onclick="selectOption('variant', 'Verde', 4)">
+                                <div class="w-16 h-16 rounded-full bg-[#2E8B57] shadow-lg border-2 border-white/50"></div>
+                                <span class="text-xl font-bold">Verde</span>
                             </button>
-                            <button class="option-btn bg-white p-3 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-2 col-span-2 text-gray-600 color-upr na-option" onclick="selectOption('variant', 'N/A', 4)">
-                                <span class="font-bold">No Aplica (N/A)</span>
+                            <button class="option-btn glass-btn p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-2 col-span-2 text-gray-700 color-upr na-option mt-2 border border-white" onclick="selectOption('variant', 'N/A', 4)">
+                                <span class="font-bold text-lg">No Aplica (N/A)</span>
                             </button>
 
-                            <!-- Tamaños Exclusivos POCKET -->
-                            <button class="option-btn bg-white p-8 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-4 text-blue-600 size-pocket hidden" onclick="selectOption('variant', 'Grande', 4)">
-                                <div class="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center text-3xl border border-blue-100"><i class="fas fa-expand-arrows-alt"></i></div>
-                                <span class="text-xl font-bold text-gray-800">Grande</span>
+                            <!-- Tamaños POCKET -->
+                            <button class="option-btn glass-btn p-8 rounded-3xl shadow-sm flex flex-col items-center justify-center gap-4 text-blue-700 size-pocket hidden border border-white" onclick="selectOption('variant', 'Grande', 4)">
+                                <div class="w-20 h-20 rounded-full bg-white/90 flex items-center justify-center text-4xl shadow-inner border border-blue-100"><i class="fas fa-expand-arrows-alt"></i></div>
+                                <span class="text-2xl font-bold text-gray-900">Grande</span>
                             </button>
-                            <button class="option-btn bg-white p-8 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-4 text-teal-600 size-pocket hidden" onclick="selectOption('variant', 'Chico', 4)">
-                                <div class="w-16 h-16 rounded-full bg-teal-50 flex items-center justify-center text-3xl border border-teal-100"><i class="fas fa-compress-arrows-alt"></i></div>
-                                <span class="text-xl font-bold text-gray-800">Chico</span>
+                            <button class="option-btn glass-btn p-8 rounded-3xl shadow-sm flex flex-col items-center justify-center gap-4 text-teal-700 size-pocket hidden border border-white" onclick="selectOption('variant', 'Chico', 4)">
+                                <div class="w-20 h-20 rounded-full bg-white/90 flex items-center justify-center text-4xl shadow-inner border border-teal-100"><i class="fas fa-compress-arrows-alt"></i></div>
+                                <span class="text-2xl font-bold text-gray-900">Chico</span>
                             </button>
                         </div>
                     </div>
 
-                    <!-- PASO 4: Tipo (Pieza / Carro / Caja) - Oculto en COWL y COVER -->
+                    <!-- PASO 4: Presentación -->
                     <div class="min-w-full flex flex-col items-center justify-center p-6 snap-center" id="step-4">
-                        <h4 class="text-2xl font-bold mb-6 text-gray-700 text-center">¿Qué presentación es?</h4>
+                        <h4 class="text-2xl font-black mb-8 text-gray-900 text-center drop-shadow-sm">¿Qué presentación es?</h4>
                         <div class="flex flex-col gap-4 w-full">
                             
-                            <!-- Opción Pieza (UPR / POCKET) -->
-                            <button class="option-btn type-btn type-upr type-pocket bg-white p-5 rounded-2xl shadow-sm flex items-center gap-4" onclick="selectOption('type', 'Pieza', 5)">
-                                <div class="w-14 h-14 rounded-xl bg-red-100 flex items-center justify-center text-red-500 text-2xl">
+                            <!-- Pieza -->
+                            <button class="option-btn type-btn type-upr type-pocket glass-btn p-5 rounded-3xl shadow-sm flex items-center gap-5 border border-white" onclick="selectOption('type', 'Pieza', 5)">
+                                <div class="w-16 h-16 rounded-2xl bg-white/90 flex items-center justify-center text-red-500 text-3xl shadow-inner border border-red-100">
                                     <i class="fas fa-puzzle-piece"></i>
                                 </div>
                                 <div class="text-left flex-1">
-                                    <span class="block text-lg font-bold text-gray-800">Pieza(s)</span>
-                                    <span class="block text-sm text-gray-500">Unidades individuales</span>
+                                    <span class="block text-xl font-bold text-gray-900">Pieza(s)</span>
+                                    <span class="block text-sm font-bold text-gray-500">Unidades individuales</span>
                                 </div>
-                                <i class="fas fa-chevron-right text-gray-300"></i>
+                                <i class="fas fa-chevron-right text-gray-400"></i>
                             </button>
                             
-                            <!-- Opciones solo UPR -->
-                            <button class="option-btn type-btn type-upr bg-white p-5 rounded-2xl shadow-sm flex items-center gap-4 hidden" onclick="selectOption('type', 'Carro Normal', 5)">
-                                <div class="w-14 h-14 rounded-xl bg-purple-100 flex items-center justify-center text-purple-500 text-2xl">
+                            <!-- Carros UPR -->
+                            <button class="option-btn type-btn type-upr glass-btn p-5 rounded-3xl shadow-sm flex items-center gap-5 hidden border border-white" onclick="selectOption('type', 'Carro de venta', 5)">
+                                <div class="w-16 h-16 rounded-2xl bg-white/90 flex items-center justify-center text-purple-500 text-3xl shadow-inner border border-purple-100">
                                     <i class="fas fa-truck"></i>
                                 </div>
                                 <div class="text-left flex-1">
-                                    <span class="block text-lg font-bold text-gray-800">Carro Normal</span>
-                                    <span class="block text-sm text-gray-500">Lote en carro estándar</span>
+                                    <span class="block text-xl font-bold text-gray-900">Carro de venta</span>
+                                    <span class="block text-sm font-bold text-gray-500">Lote comercial</span>
                                 </div>
-                                <i class="fas fa-chevron-right text-gray-300"></i>
+                                <i class="fas fa-chevron-right text-gray-400"></i>
                             </button>
 
-                            <button class="option-btn type-btn type-upr bg-white p-5 rounded-2xl shadow-sm flex items-center gap-4 hidden" onclick="selectOption('type', 'Carro Grande', 5)">
-                                <div class="w-14 h-14 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-500 text-2xl">
+                            <button class="option-btn type-btn type-upr glass-btn p-5 rounded-3xl shadow-sm flex items-center gap-5 hidden border border-white" onclick="selectOption('type', 'Carro de inyección', 5)">
+                                <div class="w-16 h-16 rounded-2xl bg-white/90 flex items-center justify-center text-indigo-500 text-3xl shadow-inner border border-indigo-100">
                                     <i class="fas fa-truck-moving"></i>
                                 </div>
                                 <div class="text-left flex-1">
-                                    <span class="block text-lg font-bold text-gray-800">Carro Grande</span>
-                                    <span class="block text-sm text-gray-500">Lote en carro extendido</span>
+                                    <span class="block text-xl font-bold text-gray-900">Carro de inyección</span>
+                                    <span class="block text-sm font-bold text-gray-500">Lote de planta</span>
                                 </div>
-                                <i class="fas fa-chevron-right text-gray-300"></i>
+                                <i class="fas fa-chevron-right text-gray-400"></i>
                             </button>
 
-                            <!-- Opciones solo POCKET -->
-                            <button class="option-btn type-btn type-pocket bg-white p-5 rounded-2xl shadow-sm flex items-center gap-4 hidden" onclick="selectOption('type', 'Caja', 5)">
-                                <div class="w-14 h-14 rounded-xl bg-teal-100 flex items-center justify-center text-teal-500 text-2xl">
+                            <!-- Cajas POCKET -->
+                            <button class="option-btn type-btn type-pocket glass-btn p-5 rounded-3xl shadow-sm flex items-center gap-5 hidden border border-white" onclick="selectOption('type', 'Caja', 5)">
+                                <div class="w-16 h-16 rounded-2xl bg-white/90 flex items-center justify-center text-teal-500 text-3xl shadow-inner border border-teal-100">
                                     <i class="fas fa-box-open"></i>
                                 </div>
                                 <div class="text-left flex-1">
-                                    <span class="block text-lg font-bold text-gray-800">Caja</span>
-                                    <span class="block text-sm text-gray-500">Lote en caja normal</span>
+                                    <span class="block text-xl font-bold text-gray-900">Caja</span>
+                                    <span class="block text-sm font-bold text-gray-500">Lote en caja normal</span>
                                 </div>
-                                <i class="fas fa-chevron-right text-gray-300"></i>
+                                <i class="fas fa-chevron-right text-gray-400"></i>
                             </button>
 
-                            <button class="option-btn type-btn type-pocket bg-white p-5 rounded-2xl shadow-sm flex items-center gap-4 hidden" onclick="selectOption('type', 'Caja Grande', 5)">
-                                <div class="w-14 h-14 rounded-xl bg-amber-100 flex items-center justify-center text-amber-500 text-2xl">
+                            <button class="option-btn type-btn type-pocket glass-btn p-5 rounded-3xl shadow-sm flex items-center gap-5 hidden border border-white" onclick="selectOption('type', 'Caja Grande', 5)">
+                                <div class="w-16 h-16 rounded-2xl bg-white/90 flex items-center justify-center text-amber-500 text-3xl shadow-inner border border-amber-100">
                                     <i class="fas fa-box"></i>
                                 </div>
                                 <div class="text-left flex-1">
-                                    <span class="block text-lg font-bold text-gray-800">Caja Grande</span>
-                                    <span class="block text-sm text-gray-500">Lote en caja extendida</span>
+                                    <span class="block text-xl font-bold text-gray-900">Caja Grande</span>
+                                    <span class="block text-sm font-bold text-gray-500">Lote en caja extendida</span>
                                 </div>
-                                <i class="fas fa-chevron-right text-gray-300"></i>
+                                <i class="fas fa-chevron-right text-gray-400"></i>
                             </button>
                         </div>
                     </div>
 
                     <!-- PASO 5: Cantidad y Fotos -->
                     <div class="min-w-full flex flex-col items-center justify-start p-6 snap-center overflow-y-auto pb-24" id="step-5">
-                        <h4 class="text-2xl font-bold mb-4 text-gray-700 text-center">Cantidades y Evidencia</h4>
+                        <h4 class="text-2xl font-black mb-6 text-gray-900 text-center drop-shadow-sm">Cantidades y Evidencia</h4>
 
-                        <!-- Tarimas Revisadas (Exclusivo para COVER) -->
-                        <div id="cover-pallets-container" class="w-full bg-emerald-50 p-5 rounded-2xl shadow-sm mb-4 border border-emerald-100 hidden">
-                            <span class="block text-sm font-bold text-emerald-700 mb-3 text-center uppercase tracking-wider"><i class="fas fa-pallet"></i> Tarimas Revisadas</span>
-                            <div class="flex items-center justify-center gap-6">
-                                <button onclick="changePallets(-1)" class="w-12 h-12 rounded-full bg-white border border-emerald-200 flex items-center justify-center text-xl font-bold text-emerald-600 hover:bg-emerald-100 transition shadow-sm"><i class="fas fa-minus"></i></button>
-                                <span id="record-pallets" class="text-4xl font-bold text-emerald-800 w-16 text-center">1</span>
-                                <button onclick="changePallets(1)" class="w-12 h-12 rounded-full bg-emerald-600 border border-emerald-600 flex items-center justify-center text-xl font-bold text-white hover:bg-emerald-700 transition shadow-sm"><i class="fas fa-plus"></i></button>
+                        <!-- Tarimas Revisadas (COVER) -->
+                        <div id="cover-pallets-container" class="w-full glass-btn p-6 rounded-3xl shadow-sm mb-5 hidden border-2 border-emerald-300">
+                            <span class="block text-sm font-black text-emerald-800 mb-4 text-center uppercase tracking-widest"><i class="fas fa-pallet mr-1"></i> Tarimas Revisadas</span>
+                            <div class="flex items-center justify-center gap-8">
+                                <button onclick="changePallets(-1)" class="w-14 h-14 rounded-full bg-white/80 border border-emerald-200 flex items-center justify-center text-2xl font-bold text-emerald-600 hover:bg-white transition shadow-sm active:scale-95"><i class="fas fa-minus"></i></button>
+                                <span id="record-pallets" class="text-5xl font-black text-emerald-900 w-20 text-center drop-shadow-sm">1</span>
+                                <button onclick="changePallets(1)" class="w-14 h-14 rounded-full bg-emerald-500 border border-emerald-400 flex items-center justify-center text-2xl font-bold text-white hover:bg-emerald-600 transition shadow-md active:scale-95"><i class="fas fa-plus"></i></button>
                             </div>
                         </div>
 
-                        <!-- Cantidad de Registros / Piezas Rechazadas -->
-                        <div class="w-full bg-white p-5 rounded-2xl shadow-sm mb-4 border border-gray-100">
-                            <span id="lbl-cantidad-rechazos" class="block text-sm font-bold text-gray-500 mb-3 text-center uppercase tracking-wider">Cantidad</span>
-                            <div class="flex items-center justify-center gap-6">
-                                <button onclick="changeQuantity(-1)" class="w-12 h-12 rounded-full bg-gray-50 border border-gray-200 flex items-center justify-center text-xl font-bold text-gray-600 hover:bg-gray-100 transition"><i class="fas fa-minus"></i></button>
-                                <span id="record-quantity" class="text-4xl font-bold text-gray-800 w-16 text-center">1</span>
-                                <button onclick="changeQuantity(1)" class="w-12 h-12 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-xl font-bold text-blue-600 hover:bg-blue-100 transition"><i class="fas fa-plus"></i></button>
+                        <!-- Cantidad -->
+                        <div class="w-full glass-btn p-6 rounded-3xl shadow-sm mb-5 border border-white">
+                            <span id="lbl-cantidad-rechazos" class="block text-sm font-black text-gray-700 mb-4 text-center uppercase tracking-widest">Cantidad</span>
+                            <div class="flex items-center justify-center gap-8">
+                                <button onclick="changeQuantity(-1)" class="w-14 h-14 rounded-full bg-white/80 border border-gray-300 flex items-center justify-center text-2xl font-bold text-gray-600 hover:bg-white transition shadow-sm active:scale-95"><i class="fas fa-minus"></i></button>
+                                <span id="record-quantity" class="text-5xl font-black text-gray-900 w-20 text-center drop-shadow-sm">1</span>
+                                <button onclick="changeQuantity(1)" class="w-14 h-14 rounded-full bg-blue-500 border border-blue-400 flex items-center justify-center text-2xl font-bold text-white hover:bg-blue-600 transition shadow-md active:scale-95"><i class="fas fa-plus"></i></button>
                             </div>
                         </div>
 
                         <!-- Fotos -->
-                        <div class="w-full bg-white p-5 rounded-2xl shadow-sm mb-6 border border-gray-100 flex flex-col items-center">
-                            <span class="block text-sm font-bold text-gray-500 mb-3 text-center uppercase tracking-wider">Evidencia (Opcional)</span>
-                            <label id="btn-foto-label" for="camera-input" class="w-full py-4 bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center gap-2 text-gray-500 cursor-pointer hover:bg-gray-100 transition">
-                                <i class="fas fa-camera text-2xl mb-1 text-gray-400"></i>
-                                <span class="text-sm font-medium">Añadir foto</span>
+                        <div class="w-full glass-btn p-6 rounded-3xl shadow-sm mb-6 flex flex-col items-center border border-white">
+                            <span class="block text-sm font-black text-gray-700 mb-4 text-center uppercase tracking-widest">Evidencia (Opcional)</span>
+                            <label id="btn-foto-label" for="camera-input" class="w-full py-6 bg-white/50 border-2 border-dashed border-gray-400/50 rounded-2xl flex flex-col items-center justify-center gap-2 text-gray-600 cursor-pointer hover:bg-white/70 transition shadow-inner">
+                                <i class="fas fa-camera text-3xl mb-1 text-gray-500"></i>
+                                <span class="text-sm font-bold tracking-wide">Añadir foto</span>
                                 <input type="file" id="camera-input" accept="image/*" class="hidden" onchange="handlePhotos(event)">
                             </label>
-                            <div id="photo-preview-container" class="flex gap-2 mt-4 overflow-x-auto w-full max-w-full pb-2 hide-scrollbar"></div>
+                            <div id="photo-preview-container" class="flex gap-3 mt-4 overflow-x-auto w-full max-w-full pb-2 hide-scrollbar"></div>
                         </div>
 
-                        <button onclick="goToStep(6)" class="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-4 rounded-xl shadow-md text-lg transition active:scale-95 flex items-center justify-center gap-2">
+                        <button onclick="goToStep(6)" class="w-full bg-gray-900 hover:bg-black text-white font-bold py-4.5 rounded-2xl shadow-xl text-lg transition active:scale-95 flex items-center justify-center gap-2 border border-gray-700">
                             Continuar <i class="fas fa-arrow-right"></i>
                         </button>
                     </div>
 
                     <!-- PASO 6: Confirmación -->
                     <div class="min-w-full flex flex-col items-center p-6 snap-center overflow-y-auto pb-24" id="step-6">
-                        <h4 class="text-2xl font-bold mb-4 text-gray-700 text-center">Confirmar Registro</h4>
+                        <h4 class="text-3xl font-black mb-6 text-gray-900 text-center drop-shadow-sm">Confirmar</h4>
                         
-                        <div class="w-full bg-white rounded-2xl shadow-sm p-6 mb-6 border border-gray-100">
-                            <div class="flex justify-between items-center py-2 border-b border-gray-50">
-                                <span class="text-gray-500">Línea</span>
-                                <span class="font-bold text-lg text-gray-800" id="summary-piece">-</span>
+                        <div class="w-full glass-btn rounded-3xl shadow-sm p-6 mb-8 border border-white">
+                            <div class="flex justify-between items-center py-3 border-b border-gray-300/30">
+                                <span class="text-gray-600 font-bold">Línea</span>
+                                <span class="font-black text-xl text-gray-900" id="summary-piece">-</span>
                             </div>
-                            <div class="flex justify-between items-center py-2 border-b border-gray-50">
-                                <span class="text-gray-500">Daño</span>
-                                <span class="font-bold text-lg text-red-500" id="summary-damage">-</span>
+                            <div class="flex justify-between items-center py-3 border-b border-gray-300/30">
+                                <span class="text-gray-600 font-bold">Daño</span>
+                                <span class="font-black text-xl text-red-600 drop-shadow-sm" id="summary-damage">-</span>
                             </div>
-                            <div class="flex justify-between items-center py-2 border-b border-gray-50">
-                                <span class="text-gray-500">Lado</span>
-                                <span class="font-bold text-lg" id="summary-side">-</span>
+                            <div class="flex justify-between items-center py-3 border-b border-gray-300/30">
+                                <span class="text-gray-600 font-bold">Lado</span>
+                                <span class="font-bold text-xl text-gray-800" id="summary-side">-</span>
                             </div>
-                            <div id="summary-variant-row" class="flex justify-between items-center py-2 border-b border-gray-50">
-                                <span class="text-gray-500" id="summary-variant-label">Variante</span>
-                                <span class="font-bold text-lg" id="summary-variant-value">-</span>
+                            <div id="summary-variant-row" class="flex justify-between items-center py-3 border-b border-gray-300/30">
+                                <span class="text-gray-600 font-bold" id="summary-variant-label">Variante</span>
+                                <span class="font-bold text-xl text-gray-800" id="summary-variant-value">-</span>
                             </div>
-                            <div id="summary-type-row" class="flex justify-between items-center py-2 border-b border-gray-50">
-                                <span class="text-gray-500">Presentación</span>
-                                <span class="font-bold text-lg" id="summary-type">-</span>
+                            <div id="summary-type-row" class="flex justify-between items-center py-3 border-b border-gray-300/30">
+                                <span class="text-gray-600 font-bold">Presentación</span>
+                                <span class="font-bold text-xl text-gray-800" id="summary-type">-</span>
                             </div>
-                            <div id="summary-pallets-row" class="flex justify-between items-center py-2 border-b border-gray-50 hidden">
-                                <span class="text-gray-500">Tarimas Revisadas</span>
-                                <span class="font-bold text-lg text-emerald-600" id="summary-pallets">1</span>
+                            <div id="summary-pallets-row" class="flex justify-between items-center py-3 border-b border-gray-300/30 hidden">
+                                <span class="text-gray-600 font-bold">Tarimas</span>
+                                <span class="font-black text-2xl text-emerald-700" id="summary-pallets">1</span>
                             </div>
-                            <div class="flex justify-between items-center py-2 border-b border-gray-50">
-                                <span class="text-gray-500" id="summary-lbl-cantidad">Cantidad</span>
-                                <span class="font-bold text-lg text-blue-600" id="summary-quantity">1</span>
+                            <div class="flex justify-between items-center py-3 border-b border-transparent mt-2">
+                                <span class="text-gray-800 font-black uppercase tracking-wider" id="summary-lbl-cantidad">Cantidad Total</span>
+                                <span class="font-black text-3xl text-blue-700 drop-shadow-sm" id="summary-quantity">1</span>
                             </div>
                         </div>
 
-                        <button id="btn-save-record" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-md text-lg transition active:scale-95 flex items-center justify-center gap-2">
-                            <i class="fas fa-save"></i> Guardar
+                        <button id="btn-save-record" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4.5 rounded-2xl shadow-xl text-xl transition active:scale-95 flex items-center justify-center gap-3 border border-blue-500">
+                            <i class="fas fa-save text-2xl"></i> Guardar
                         </button>
                     </div>
                 </div>
@@ -527,95 +598,95 @@
     </div>
 
     <!-- Modal Detalles de Registro (Fotos y Clonar) -->
-    <div id="record-details-modal" class="fixed inset-0 bg-black bg-opacity-90 z-[60] hidden flex-col fade-in">
-        <div class="flex justify-end p-4">
-            <button onclick="closeRecordDetails()" class="w-10 h-10 bg-gray-800 rounded-full text-white flex items-center justify-center text-xl hover:bg-gray-700 transition active:scale-95"><i class="fas fa-times"></i></button>
+    <div id="record-details-modal" class="fixed inset-0 bg-black/70 backdrop-blur-xl z-[60] hidden flex-col fade-in">
+        <div class="flex justify-end p-5">
+            <button onclick="closeRecordDetails()" class="w-12 h-12 bg-white/20 rounded-full text-white flex items-center justify-center text-2xl hover:bg-white/30 backdrop-blur-md transition active:scale-95 border border-white/20"><i class="fas fa-times"></i></button>
         </div>
         
         <div id="details-photos" class="flex-1 overflow-x-auto snap-x-mandatory flex hide-scrollbar items-center gap-4 px-4 pb-4">
             <!-- Las imágenes se inyectan aquí -->
         </div>
         
-        <div class="bg-white rounded-t-3xl p-6 slide-up shadow-2xl">
+        <div class="bg-white/90 backdrop-blur-2xl rounded-t-[2.5rem] p-7 slide-up shadow-[0_-10px_40px_rgba(0,0,0,0.3)] border-t border-white/50">
             <div class="flex justify-between items-start mb-1">
-                <h3 id="details-title" class="text-xl font-bold text-gray-800">-</h3>
-                <span id="details-time" class="text-sm font-medium text-gray-400"></span>
+                <h3 id="details-title" class="text-2xl font-black text-gray-900 drop-shadow-sm">-</h3>
+                <span id="details-time" class="text-sm font-bold text-gray-500 bg-black/5 px-2 py-1 rounded-md"></span>
             </div>
-            <p id="details-damage" class="text-red-500 font-bold text-lg mb-2">-</p>
+            <p id="details-damage" class="text-red-600 font-black text-xl mb-3 drop-shadow-sm">-</p>
             <div id="details-badges" class="flex flex-wrap gap-2 mb-6">
                 <!-- Badges de lado/variante se inyectan aquí -->
             </div>
             
-            <div class="flex items-center justify-between mb-4 bg-gray-50 p-3 rounded-xl border border-gray-100">
-                <span class="text-sm font-bold text-gray-600">Cantidad a añadir:</span>
-                <div class="flex items-center gap-4">
-                    <button onclick="changeCloneQuantity(-1)" class="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-lg font-bold text-gray-600 hover:bg-gray-100 transition shadow-sm"><i class="fas fa-minus"></i></button>
-                    <span id="clone-quantity" class="text-2xl font-bold text-gray-800 w-8 text-center">1</span>
-                    <button onclick="changeCloneQuantity(1)" class="w-10 h-10 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-lg font-bold text-blue-600 hover:bg-blue-100 transition shadow-sm"><i class="fas fa-plus"></i></button>
+            <div class="flex items-center justify-between mb-5 bg-black/5 p-4 rounded-2xl border border-black/10 shadow-inner">
+                <span class="text-sm font-bold text-gray-700 uppercase tracking-wide">Clonar cantidad:</span>
+                <div class="flex items-center gap-5">
+                    <button onclick="changeCloneQuantity(-1)" class="w-12 h-12 rounded-full bg-white border border-gray-300 flex items-center justify-center text-xl font-bold text-gray-700 hover:bg-gray-50 transition shadow-sm active:scale-95"><i class="fas fa-minus"></i></button>
+                    <span id="clone-quantity" class="text-3xl font-black text-gray-900 w-10 text-center">1</span>
+                    <button onclick="changeCloneQuantity(1)" class="w-12 h-12 rounded-full bg-blue-100 border border-blue-200 flex items-center justify-center text-xl font-bold text-blue-700 hover:bg-blue-200 transition shadow-sm active:scale-95"><i class="fas fa-plus"></i></button>
                 </div>
             </div>
 
-            <button id="btn-duplicate-record" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg text-lg transition active:scale-95 flex items-center justify-center gap-2">
-                <i class="fas fa-copy text-xl"></i> Registrar más iguales
+            <button id="btn-duplicate-record" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4.5 rounded-2xl shadow-xl text-lg transition active:scale-95 flex items-center justify-center gap-3 border border-blue-500">
+                <i class="fas fa-copy text-2xl"></i> Registrar más iguales
             </button>
         </div>
     </div>
 
     <!-- Modal de Reporte Diario Inteligente -->
-    <div id="report-modal" class="fixed inset-0 bg-black bg-opacity-60 z-[55] hidden flex-col justify-end fade-in">
-        <div class="bg-white w-full max-w-md mx-auto rounded-t-3xl h-[85vh] flex flex-col slide-up relative">
-            <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-white rounded-t-3xl z-10 shadow-sm">
+    <div id="report-modal" class="fixed inset-0 bg-black/50 backdrop-blur-md z-[55] hidden flex-col justify-end fade-in">
+        <div class="glass-panel w-full max-w-md mx-auto rounded-t-[2.5rem] h-[85vh] flex flex-col slide-up relative overflow-hidden bg-white/95">
+            <div class="p-6 border-b border-gray-200/50 flex justify-between items-center bg-white/60 backdrop-blur-xl z-10 shadow-sm">
                 <div>
-                    <h3 class="text-xl font-bold text-gray-800">Reporte <span id="report-piece-badge" class="bg-gray-200 text-xs px-2 py-1 rounded ml-1 text-gray-700"></span></h3>
-                    <p class="text-sm text-gray-500">Solo defectos registrados</p>
+                    <h3 class="text-2xl font-black text-gray-900 drop-shadow-sm">Reporte <span id="report-piece-badge" class="bg-black/10 text-xs px-2 py-1 rounded-md ml-1 text-gray-700 border border-white"></span></h3>
+                    <p class="text-sm font-bold text-gray-500 mt-1">Solo defectos registrados</p>
                 </div>
-                <button onclick="closeReportModal()" class="w-10 h-10 bg-gray-100 rounded-full text-gray-600 hover:bg-gray-200 flex items-center justify-center transition active:scale-95">
-                    <i class="fas fa-times"></i>
+                <button onclick="closeReportModal()" class="w-10 h-10 bg-white/80 rounded-full text-gray-700 hover:bg-white flex items-center justify-center transition active:scale-95 border border-gray-200 shadow-sm">
+                    <i class="fas fa-times text-lg"></i>
                 </button>
             </div>
             
-            <div class="p-4 bg-white border-b border-gray-100 flex items-center gap-3 shadow-sm z-10">
-                <label for="report-date-picker" class="font-bold text-gray-700 text-sm">Fecha:</label>
-                <input type="date" id="report-date-picker" class="flex-1 bg-gray-50 border border-gray-300 text-gray-800 rounded-lg px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500" onchange="generateReportContent()">
+            <div class="p-5 bg-black/5 border-b border-black/5 flex items-center gap-4 shadow-inner z-10">
+                <label for="report-date-picker" class="font-bold text-gray-800 text-sm uppercase tracking-wide">Fecha:</label>
+                <input type="date" id="report-date-picker" class="flex-1 bg-white border border-gray-300 text-gray-900 rounded-xl px-4 py-2.5 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm" onchange="generateReportContent()">
             </div>
 
-            <div id="report-content" class="flex-1 overflow-y-auto p-4 bg-gray-50 space-y-3 pb-24">
+            <div id="report-content" class="flex-1 overflow-y-auto p-5 bg-transparent space-y-4 pb-24">
                 <!-- Contenido generado dinámicamente -->
             </div>
         </div>
     </div>
 
     <!-- Modal para Seleccionar Fecha y Generar PDF -->
-    <div id="export-date-modal" class="fixed inset-0 bg-black bg-opacity-60 z-[60] hidden flex-col justify-end fade-in">
-        <div class="bg-white w-full max-w-md mx-auto rounded-t-3xl p-6 slide-up shadow-2xl">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-xl font-bold text-gray-800">Descargar PDF Oficial</h3>
-                <button onclick="closeExportModal()" class="text-gray-400 hover:text-gray-700 transition">
-                    <i class="fas fa-times text-xl"></i>
+    <div id="export-date-modal" class="fixed inset-0 bg-black/60 backdrop-blur-lg z-[100] hidden flex-col justify-end fade-in">
+        <div class="bg-white/95 backdrop-blur-2xl w-full max-w-md mx-auto rounded-t-[2.5rem] p-8 slide-up shadow-2xl border-t border-white/50">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-black text-gray-900 drop-shadow-sm">Descargar PDF Oficial</h3>
+                <button onclick="closeExportModal()" class="w-10 h-10 bg-gray-100 rounded-full text-gray-600 hover:bg-gray-200 flex items-center justify-center transition active:scale-95">
+                    <i class="fas fa-times"></i>
                 </button>
             </div>
-            <p class="text-gray-500 text-sm mb-4">Selecciona la fecha para generar el documento PDF con los resultados organizados de todas las líneas.</p>
+            <p class="text-gray-600 font-medium text-sm mb-6 leading-relaxed">Selecciona la fecha para generar el documento PDF estructurado de todas las líneas.</p>
             
-            <div class="mb-6">
-                <label for="export-date-picker" class="block font-bold text-gray-700 text-sm mb-2">Fecha del reporte:</label>
-                <input type="date" id="export-date-picker" class="w-full bg-gray-50 border border-gray-300 text-gray-800 rounded-xl px-4 py-3 text-lg font-medium focus:outline-none focus:ring-2 focus:ring-red-500">
+            <div class="mb-8">
+                <label for="export-date-picker" class="block font-bold text-gray-800 text-sm mb-2 uppercase tracking-wide">Fecha del reporte:</label>
+                <input type="date" id="export-date-picker" class="w-full bg-white border-2 border-gray-200 text-gray-900 rounded-2xl px-4 py-4 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent shadow-sm">
             </div>
 
-            <button onclick="downloadPDF()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-xl shadow-lg text-lg transition active:scale-95 flex items-center justify-center gap-2">
-                <i class="fas fa-file-pdf"></i> Generar Archivo PDF
+            <button onclick="downloadPDF()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4.5 rounded-2xl shadow-xl text-lg transition active:scale-95 flex items-center justify-center gap-3 border border-red-500">
+                <i class="fas fa-file-pdf text-2xl"></i> Generar Archivo PDF
             </button>
         </div>
     </div>
 
     <!-- Notificaciones -->
-    <div id="top-alert" class="fixed top-0 left-0 w-full bg-red-500 text-white p-3 text-center text-sm font-bold shadow-md z-[100] transform -translate-y-full transition-transform duration-300 flex items-center justify-center gap-2">
+    <div id="top-alert" class="fixed top-0 left-0 w-full bg-red-500/95 backdrop-blur-md text-white p-4 text-center text-sm font-bold shadow-lg z-[200] transform -translate-y-full transition-transform duration-300 flex items-center justify-center gap-2 border-b border-red-400">
         <i class="fas fa-exclamation-triangle"></i> <span id="top-alert-msg"></span>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // 🚨 CONFIGURACIÓN DE FIREBASE 🚨
         let firebaseConfig = {
@@ -635,6 +706,9 @@
         let selectedForDeletion = new Set();
         let currentPiece = null; 
         let cloneQuantityValue = 1;
+        
+        let inspectorName = '';
+        let unsubscribeInspector = null;
 
         const getLocalDateString = () => {
             const now = new Date();
@@ -649,6 +723,57 @@
         const getFilteredRecords = () => {
             return allRecords.filter(r => (r.pieceType || 'UPR') === currentPiece);
         };
+
+        // --- SISTEMA DE IDENTIDAD DINÁMICA POR PIEZA ---
+        window.openInspectorModal = function() {
+            // Autocompletar con el último nombre usado en este celular (comodidad)
+            document.getElementById('inspector-name-input').value = localStorage.getItem('delta_last_name') || '';
+            document.getElementById('inspector-modal-desc').textContent = `Ingresa tu nombre para ser el inspector oficial de ${currentPiece} hoy.`;
+            document.getElementById('inspector-name-modal').classList.remove('hidden');
+            document.getElementById('inspector-name-modal').classList.add('flex');
+        };
+
+        window.closeInspectorModal = function() {
+            document.getElementById('inspector-name-modal').classList.add('hidden');
+            document.getElementById('inspector-name-modal').classList.remove('flex');
+        };
+
+        window.saveInspectorName = async function() {
+            const name = document.getElementById('inspector-name-input').value.trim();
+            if(!name) return showNotification("Por favor, ingresa tu nombre.");
+            
+            localStorage.setItem('delta_last_name', name);
+            
+            const docId = `${getLocalDateString()}_${currentPiece}`;
+            const docRef = doc(db, 'asignaciones_delta', docId);
+
+            try {
+                await setDoc(docRef, { inspectorName: name, timestamp: Date.now() });
+                closeInspectorModal();
+            } catch(e) {
+                console.error(e);
+                showNotification("Error al guardar el inspector en la nube.");
+            }
+        };
+
+        async function checkDailyInspector() {
+            if (unsubscribeInspector) unsubscribeInspector();
+            
+            const docId = `${getLocalDateString()}_${currentPiece}`;
+            const docRef = doc(db, 'asignaciones_delta', docId);
+
+            unsubscribeInspector = onSnapshot(docRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    inspectorName = data.inspectorName;
+                    document.getElementById('current-inspector-display').textContent = inspectorName;
+                } else {
+                    inspectorName = '';
+                    document.getElementById('current-inspector-display').textContent = 'Nadie asignado';
+                    openInspectorModal(); // Nadie registrado hoy, pedir nombre
+                }
+            });
+        }
 
         async function initApp() {
             document.getElementById('current-date-display').textContent = formatDateToDisplay(getLocalDateString());
@@ -666,8 +791,8 @@
                     allRecords = [];
                     snapshot.forEach(docSnap => allRecords.push({ id: docSnap.id, ...docSnap.data() }));
                     
-                    document.getElementById('cloud-status').innerHTML = '<i class="fas fa-cloud text-green-300"></i> En línea';
-                    document.getElementById('lobby-cloud-status').innerHTML = '<i class="fas fa-cloud text-green-500"></i> Nube Sincronizada';
+                    document.getElementById('cloud-status').innerHTML = '<i class="fas fa-cloud text-green-400 drop-shadow"></i>';
+                    document.getElementById('lobby-cloud-status').innerHTML = '<i class="fas fa-cloud text-green-600 drop-shadow"></i> Nube Sincronizada';
                     
                     if(currentPiece) {
                         updateDashboard();
@@ -675,12 +800,12 @@
                     }
                 }, (error) => {
                     console.error(error);
-                    document.getElementById('cloud-status').innerHTML = '<i class="fas fa-exclamation-triangle text-red-300"></i> Error Base Datos';
+                    document.getElementById('cloud-status').innerHTML = '<i class="fas fa-exclamation-triangle text-red-400"></i> Error Base Datos';
                 });
 
             } catch (error) {
                 console.error(error);
-                document.getElementById('cloud-status').innerHTML = '<i class="fas fa-wifi text-red-300"></i> Sin conexión';
+                document.getElementById('cloud-status').innerHTML = '<i class="fas fa-wifi text-red-400"></i> Sin conexión';
             }
         }
 
@@ -694,18 +819,11 @@
 
             const header = document.getElementById('main-header');
             const wizardProgress = document.getElementById('wizard-progress');
-            const btnSaveRecord = document.getElementById('btn-save-record');
-            const btnOpenWizard = document.getElementById('btn-open-wizard');
             
             document.getElementById('header-piece-name').textContent = piece;
             document.getElementById('wizard-piece-badge').textContent = piece;
             document.getElementById('report-piece-badge').textContent = piece;
 
-            header.className = 'text-white p-5 rounded-b-3xl shadow-md sticky top-0 z-10 transition-colors duration-300';
-            wizardProgress.className = 'h-full transition-all duration-300';
-            btnSaveRecord.className = 'w-full text-white font-bold py-4 rounded-xl shadow-md text-lg transition active:scale-95 flex items-center justify-center gap-2';
-            btnOpenWizard.className = 'w-full text-white font-bold py-4 px-6 rounded-2xl shadow-lg transform transition active:scale-95 flex items-center justify-center gap-3 text-lg transition-colors duration-300';
-            
             document.querySelectorAll('.dmg-btn').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('.type-btn').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('.na-option').forEach(el => el.classList.remove('hidden'));
@@ -721,74 +839,64 @@
             document.getElementById('stat-card-tarimas').classList.add('hidden');
             
             document.getElementById('lbl-cantidad-rechazos').textContent = "Cantidad";
-            document.getElementById('summary-lbl-cantidad').textContent = "Cantidad";
+            document.getElementById('summary-lbl-cantidad').textContent = "Cantidad Total";
             document.getElementById('cover-pallets-container').classList.add('hidden');
             document.getElementById('summary-pallets-row').classList.add('hidden');
             document.getElementById('summary-type-row').classList.remove('hidden');
 
+            header.className = 'text-white p-5 rounded-b-[2rem] shadow-lg sticky top-0 z-10 transition-colors duration-300 bg-opacity-90 backdrop-blur-xl border-b border-white/20';
+            
             if(piece === 'UPR') {
-                header.classList.add('bg-blue-600'); wizardProgress.classList.add('bg-blue-600');
-                btnSaveRecord.classList.add('bg-blue-600', 'hover:bg-blue-700'); btnOpenWizard.classList.add('bg-blue-600', 'hover:bg-blue-700');
-                
+                header.classList.add('bg-blue-700'); wizardProgress.className = 'h-full transition-all duration-300 shadow-[0_0_10px_rgba(59,130,246,0.8)] bg-blue-500';
                 document.querySelectorAll('.upr-dmg').forEach(el => el.classList.remove('hidden'));
                 document.querySelectorAll('.type-upr').forEach(el => el.classList.remove('hidden'));
                 document.querySelectorAll('.color-upr').forEach(el => el.classList.remove('hidden'));
-                
                 document.getElementById('step-4').classList.remove('hidden'); document.getElementById('step-4').classList.add('flex');
                 document.getElementById('stat-card-carros').classList.remove('hidden'); document.getElementById('stat-card-carros').classList.add('flex');
-                
                 document.getElementById('step-3-title').textContent = 'Color';
                 document.getElementById('summary-variant-label').textContent = 'Color';
                 document.getElementById('summary-variant-row').classList.remove('hidden');
 
             } else if (piece === 'COWL') {
-                header.classList.add('bg-indigo-700'); wizardProgress.classList.add('bg-indigo-600');
-                btnSaveRecord.classList.add('bg-indigo-600', 'hover:bg-indigo-700'); btnOpenWizard.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
-                
+                header.classList.add('bg-indigo-700'); wizardProgress.className = 'h-full transition-all duration-300 shadow-[0_0_10px_rgba(99,102,241,0.8)] bg-indigo-500';
                 document.querySelectorAll('.cowl-dmg').forEach(el => el.classList.remove('hidden'));
                 document.getElementById('step-4').classList.remove('flex'); document.getElementById('step-4').classList.add('hidden');
                 document.getElementById('summary-type-row').classList.add('hidden');
                 document.getElementById('stat-card-piezas').classList.add('col-span-2');
 
             } else if (piece === 'POCKET') {
-                header.classList.add('bg-teal-600'); wizardProgress.classList.add('bg-teal-500');
-                btnSaveRecord.classList.add('bg-teal-600', 'hover:bg-teal-700'); btnOpenWizard.classList.add('bg-teal-600', 'hover:bg-teal-700');
-                
+                header.classList.add('bg-teal-700'); wizardProgress.className = 'h-full transition-all duration-300 shadow-[0_0_10px_rgba(20,184,166,0.8)] bg-teal-500';
                 document.querySelectorAll('.pocket-dmg').forEach(el => el.classList.remove('hidden'));
                 document.querySelectorAll('.type-pocket').forEach(el => el.classList.remove('hidden'));
                 document.querySelectorAll('.size-pocket').forEach(el => el.classList.remove('hidden'));
-                
                 document.getElementById('step-4').classList.remove('hidden'); document.getElementById('step-4').classList.add('flex');
                 document.getElementById('stat-card-cajas').classList.remove('hidden'); document.getElementById('stat-card-cajas').classList.add('flex');
-                
                 document.getElementById('step-3-title').textContent = 'Tamaño';
                 document.getElementById('summary-variant-label').textContent = 'Tamaño';
                 document.getElementById('summary-variant-row').classList.remove('hidden');
 
             } else if (piece === 'COVER') {
-                header.classList.add('bg-emerald-600'); wizardProgress.classList.add('bg-emerald-600');
-                btnSaveRecord.classList.add('bg-emerald-600', 'hover:bg-emerald-700'); btnOpenWizard.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
-                
+                header.classList.add('bg-emerald-700'); wizardProgress.className = 'h-full transition-all duration-300 shadow-[0_0_10px_rgba(16,185,129,0.8)] bg-emerald-500';
                 document.querySelectorAll('.cover-dmg').forEach(el => el.classList.remove('hidden'));
                 document.getElementById('step-4').classList.remove('flex'); document.getElementById('step-4').classList.add('hidden');
                 document.getElementById('summary-type-row').classList.add('hidden');
-                
                 document.getElementById('stat-card-piezas').classList.add('hidden');
                 document.getElementById('stat-card-tarimas').classList.remove('hidden');
                 document.getElementById('cover-pallets-container').classList.remove('hidden');
                 document.getElementById('summary-pallets-row').classList.remove('hidden');
-                
                 document.getElementById('lbl-cantidad-rechazos').textContent = "Piezas Rechazadas";
-                document.getElementById('summary-lbl-cantidad').textContent = "Piezas Rechazadas";
+                document.getElementById('summary-lbl-cantidad').textContent = "Total Rechazos";
                 document.querySelectorAll('.na-option').forEach(el => el.classList.add('hidden'));
             }
 
             updateDashboard();
             renderBitacora();
+            checkDailyInspector(); // Verificar nube al entrar
         };
 
         window.goBackToLobby = function() {
             currentPiece = null;
+            if (unsubscribeInspector) unsubscribeInspector();
             document.getElementById('lobby-screen').classList.remove('hidden');
             document.getElementById('main-dashboard').classList.add('hidden');
             document.getElementById('btn-registrar-container').classList.add('hidden');
@@ -798,7 +906,7 @@
             const todayStr = getLocalDateString();
             const records = getFilteredRecords().filter(r => r.dateString === todayStr);
             
-            let stats = { piezasTotal: 0, rh: 0, lh: 0, carrosTotal: 0, carrosNormal: 0, carrosGrande: 0, cajasTotal: 0, cajaNormal: 0, cajaGrande: 0, tarimas: 0 };
+            let stats = { piezasTotal: 0, rh: 0, lh: 0, carrosTotal: 0, carrosVenta: 0, carrosInyeccion: 0, cajasTotal: 0, cajaNormal: 0, cajaGrande: 0, tarimas: 0 };
 
             records.forEach(r => {
                 let qty = r.quantity || 1;
@@ -813,8 +921,8 @@
                     else if (r.type === 'Caja Grande') { stats.cajasTotal += qty; stats.cajaGrande += qty; }
                 } else { 
                     if (r.type === 'Pieza') { stats.piezasTotal += qty; if (r.side === 'RH') stats.rh += qty; if (r.side === 'LH') stats.lh += qty; }
-                    else if (r.type === 'Carro Normal') { stats.carrosTotal += qty; stats.carrosNormal += qty; }
-                    else if (r.type === 'Carro Grande') { stats.carrosTotal += qty; stats.carrosGrande += qty; }
+                    else if (r.type === 'Carro de venta') { stats.carrosTotal += qty; stats.carrosVenta += qty; }
+                    else if (r.type === 'Carro de inyección') { stats.carrosTotal += qty; stats.carrosInyeccion += qty; }
                 }
             });
 
@@ -822,8 +930,8 @@
             document.getElementById('stat-piezas-rh').textContent = stats.rh;
             document.getElementById('stat-piezas-lh').textContent = stats.lh;
             document.getElementById('stat-carros-total').textContent = stats.carrosTotal;
-            document.getElementById('stat-carros-normal').textContent = stats.carrosNormal;
-            document.getElementById('stat-carros-grande').textContent = stats.carrosGrande;
+            document.getElementById('stat-carros-venta').textContent = stats.carrosVenta;
+            document.getElementById('stat-carros-inyeccion').textContent = stats.carrosInyeccion;
             document.getElementById('stat-cajas-total').textContent = stats.cajasTotal;
             document.getElementById('stat-cajas-normal').textContent = stats.cajaNormal;
             document.getElementById('stat-cajas-grande').textContent = stats.cajaGrande;
@@ -837,7 +945,7 @@
             const records = getFilteredRecords().sort((a, b) => b.timestamp - a.timestamp);
 
             if (records.length === 0) {
-                container.innerHTML = `<div class="text-center py-8 text-gray-400 text-sm bg-white rounded-xl border border-gray-100"><i class="fas fa-clipboard-list text-3xl mb-2 text-gray-200"></i><p>No hay registros para ${currentPiece}.</p></div>`;
+                container.innerHTML = `<div class="text-center py-10 glass-btn rounded-2xl border border-white"><i class="fas fa-clipboard-list text-4xl mb-3 text-gray-400"></i><p class="font-bold text-gray-600">No hay registros hoy.</p></div>`;
                 return;
             }
 
@@ -846,42 +954,44 @@
                 if (r.dateString !== currentGroupDate) {
                     currentGroupDate = r.dateString;
                     const header = document.createElement('div');
-                    header.className = 'text-xs font-bold text-gray-500 uppercase mt-4 mb-2 px-2 tracking-wider';
+                    header.className = 'text-xs font-black text-gray-800 uppercase mt-5 mb-2 px-2 tracking-widest drop-shadow-sm';
                     header.textContent = currentGroupDate === getLocalDateString() ? 'Hoy' : currentGroupDate;
                     container.appendChild(header);
                 }
 
                 let iconClass = 'fa-puzzle-piece text-red-500 bg-red-100';
-                if (r.type && r.type.includes('Carro')) iconClass = 'fa-truck text-purple-500 bg-purple-100';
+                if (r.type && r.type.includes('Carro')) iconClass = 'fa-truck text-purple-600 bg-purple-100';
                 if (r.type && r.type.includes('Caja')) iconClass = 'fa-box-open text-teal-600 bg-teal-100';
                 
-                const sideColor = r.side === 'RH' ? 'text-blue-600 bg-blue-50' : (r.side === 'LH' ? 'text-green-600 bg-green-50' : 'text-gray-500 bg-gray-100');
-                const qtyText = (r.quantity > 1) ? `<span class="bg-gray-800 text-white text-[10px] font-bold px-1.5 py-0.5 rounded ml-1">${r.quantity} ${r.type}</span>` : '';
-                const palletText = (currentPiece === 'COVER' && r.pallets) ? `<span class="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-1.5 py-0.5 rounded ml-1 border border-emerald-200">${r.pallets} Tarimas</span>` : '';
+                const sideColor = r.side === 'RH' ? 'text-blue-700 bg-blue-100/80 border-blue-200' : (r.side === 'LH' ? 'text-green-700 bg-green-100/80 border-green-200' : 'text-gray-700 bg-gray-100/80 border-gray-200');
+                const qtyText = (r.quantity > 1) ? `<span class="bg-gray-900 text-white text-[10px] font-bold px-2 py-0.5 rounded-md ml-1 shadow-sm">${r.quantity} ${r.type}</span>` : '';
+                const palletText = (currentPiece === 'COVER' && r.pallets) ? `<span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-md ml-1 border border-emerald-300">${r.pallets} Tarimas</span>` : '';
                 const isSelected = selectedForDeletion.has(r.id);
                 
-                const variantSpan = (r.variant && r.variant !== 'N/A') ? `<span class="bg-gray-100 px-1.5 py-0.5 rounded text-gray-600 font-medium">${r.variant}</span>` : '';
+                const variantSpan = (r.variant && r.variant !== 'N/A') ? `<span class="bg-black/5 border border-white px-2 py-0.5 rounded-md text-gray-800 font-bold">${r.variant}</span>` : '';
                 
+                const inspectorStr = r.inspectorName ? `<span class="text-[9px] text-gray-500 block font-bold"><i class="fas fa-user mr-0.5"></i> ${r.inspectorName.substring(0, 15)}</span>` : `<span class="text-[9px] text-gray-400 block font-bold">Sin asignar</span>`;
+
                 const card = document.createElement('div');
-                card.className = `p-3 rounded-xl shadow-sm border mb-2 flex items-start gap-2 ${isDeleteMode ? (isSelected ? 'bg-red-50 border-red-300 ring-2 ring-red-400' : 'bg-white border-gray-200 cursor-pointer') : 'bg-white border-gray-200 cursor-pointer hover:bg-gray-50 transition'}`;
+                card.className = `p-3.5 rounded-2xl shadow-sm mb-3 flex items-start gap-3 glass-btn border border-white ${isDeleteMode ? (isSelected ? 'bg-red-50/90 border-red-400 ring-2 ring-red-400' : 'cursor-pointer') : 'cursor-pointer'}`;
                 
                 if (isDeleteMode) { card.onclick = () => toggleRecordSelection(r.id); } 
                 else { card.onclick = () => openRecordDetails(r.id); }
 
                 card.innerHTML = `
-                    ${isDeleteMode ? `<div class="flex items-center justify-center mt-2 mr-1"><div class="w-6 h-6 rounded-full border-2 flex items-center justify-center ${isSelected ? 'bg-red-500 border-red-500' : 'border-gray-300 bg-white'}">${isSelected ? '<i class="fas fa-check text-white text-[12px]"></i>' : ''}</div></div>` : ''}
-                    <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mt-1 ${iconClass.split(' ').slice(1).join(' ')}"><i class="fas ${iconClass.split(' ')[0]}"></i></div>
+                    ${isDeleteMode ? `<div class="flex items-center justify-center mt-2 mr-1"><div class="w-6 h-6 rounded-full border-2 flex items-center justify-center ${isSelected ? 'bg-red-500 border-red-500' : 'border-gray-400 bg-white/50'}">${isSelected ? '<i class="fas fa-check text-white text-[12px]"></i>' : ''}</div></div>` : ''}
+                    <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 shadow-inner border border-white ${iconClass.split(' ').slice(1).join(' ')}"><i class="fas ${iconClass.split(' ')[0]} text-lg"></i></div>
                     <div class="flex-1 overflow-hidden ml-1">
                         <div class="flex justify-between items-start">
-                            <p class="font-bold text-gray-800 text-sm">${r.type} ${qtyText} ${palletText}</p>
-                            <div class="text-[10px] text-gray-400 font-medium text-right leading-tight">${formatTime(r.timestamp)}<br><span class="text-[9px] text-gray-300">ID: ${r.inspectorId || 'N/A'}</span></div>
+                            <p class="font-black text-gray-900 text-sm drop-shadow-sm">${r.type} ${qtyText} ${palletText}</p>
+                            <div class="text-[10px] text-gray-600 font-bold text-right leading-tight">${formatTime(r.timestamp)}${inspectorStr}</div>
                         </div>
-                        <p class="text-xs text-gray-500 flex flex-wrap gap-1 mt-1">
-                            <span class="font-medium ${sideColor} px-1.5 py-0.5 rounded">${r.side}</span>
+                        <p class="text-xs flex flex-wrap gap-1.5 mt-2">
+                            <span class="font-bold border backdrop-blur-sm ${sideColor} px-2 py-0.5 rounded-md">${r.side}</span>
                             ${variantSpan}
-                            <span class="text-red-600 bg-red-50 px-1.5 py-0.5 rounded font-medium truncate max-w-full"><i class="fas fa-exclamation-triangle text-[10px] mr-1"></i>${r.damage}</span>
+                            <span class="text-red-700 bg-red-100/90 border border-red-200 px-2 py-0.5 rounded-md font-bold truncate max-w-full shadow-sm"><i class="fas fa-exclamation-triangle text-[10px] mr-1"></i>${r.damage}</span>
                         </p>
-                        ${r.photos && r.photos.length > 0 ? `<div class="flex gap-2 mt-2 hide-scrollbar overflow-x-auto pb-1">${r.photos.map(p => `<img src="${p}" class="w-12 h-12 rounded object-cover border border-gray-200">`).join('')}</div>` : ''}
+                        ${r.photos && r.photos.length > 0 ? `<div class="flex gap-2 mt-3 hide-scrollbar overflow-x-auto pb-1">${r.photos.map(p => `<img src="${p}" class="w-12 h-12 rounded-lg object-cover border border-white shadow-sm">`).join('')}</div>` : ''}
                     </div>
                 `;
                 container.appendChild(card);
@@ -896,10 +1006,10 @@
 
             const photoContainer = document.getElementById('details-photos');
             if (r.photos && r.photos.length > 0) {
-                photoContainer.innerHTML = r.photos.map(p => `<img src="${p}" class="w-full max-h-[60vh] object-contain snap-center rounded-xl bg-gray-900 border border-gray-700 shadow-xl">`).join('');
+                photoContainer.innerHTML = r.photos.map(p => `<img src="${p}" class="w-full max-h-[60vh] object-contain snap-center rounded-2xl bg-black/80 shadow-2xl border border-white/20">`).join('');
                 photoContainer.classList.remove('hidden');
             } else {
-                photoContainer.innerHTML = '<div class="w-full flex flex-col items-center justify-center text-gray-500 py-10 opacity-50"><i class="fas fa-image text-4xl mb-2"></i><p>Sin fotografías</p></div>';
+                photoContainer.innerHTML = '<div class="w-full flex flex-col items-center justify-center text-white/50 py-12"><i class="fas fa-image text-5xl mb-3"></i><p class="font-bold">Sin fotografías</p></div>';
                 photoContainer.classList.remove('hidden');
             }
 
@@ -910,8 +1020,8 @@
             document.getElementById('details-time').textContent = formatTime(r.timestamp);
 
             let badgesHtml = '';
-            if(r.side && r.side !== 'N/A') badgesHtml += `<span class="bg-gray-100 text-gray-600 px-3 py-1 rounded font-bold text-sm">${r.side}</span>`;
-            if(r.variant && r.variant !== 'N/A') badgesHtml += `<span class="bg-gray-100 text-gray-600 px-3 py-1 rounded font-bold text-sm">Var: ${r.variant}</span>`;
+            if(r.side && r.side !== 'N/A') badgesHtml += `<span class="bg-black/10 text-gray-800 border border-white/50 px-3 py-1 rounded-md font-bold text-sm shadow-sm">${r.side}</span>`;
+            if(r.variant && r.variant !== 'N/A') badgesHtml += `<span class="bg-black/10 text-gray-800 border border-white/50 px-3 py-1 rounded-md font-bold text-sm shadow-sm">Var: ${r.variant}</span>`;
             document.getElementById('details-badges').innerHTML = badgesHtml;
 
             cloneQuantityValue = 1;
@@ -934,11 +1044,12 @@
         };
 
         window.duplicateRecord = async function(id) {
+            if(!inspectorName) return showNotification("¡Atención! Asigna un nombre en la parte de arriba primero.");
             const original = allRecords.find(x => x.id === id);
             if (!original || !currentUser) return;
 
             const btn = document.getElementById('btn-duplicate-record');
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Registrando...';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin text-2xl"></i> Registrando...';
             btn.disabled = true;
 
             try {
@@ -947,6 +1058,7 @@
                 newRecord.timestamp = Date.now();
                 newRecord.dateString = getLocalDateString();
                 newRecord.inspectorId = currentUser.uid.substring(0, 4);
+                newRecord.inspectorName = inspectorName;
                 
                 newRecord.quantity = cloneQuantityValue;
                 if (currentPiece === 'COVER') newRecord.pallets = 0;
@@ -958,12 +1070,16 @@
                 console.error(e);
                 showNotification("Error al crear el nuevo registro.");
             } finally {
-                btn.innerHTML = '<i class="fas fa-copy text-xl"></i> Registrar más iguales';
+                btn.innerHTML = '<i class="fas fa-copy text-2xl"></i> Registrar más iguales';
                 btn.disabled = false;
             }
         };
 
         document.getElementById('btn-open-wizard').addEventListener('click', () => {
+            if(!inspectorName) {
+                openInspectorModal();
+                return showNotification("Configura quién está inspeccionando.");
+            }
             document.getElementById('wizard-modal').classList.remove('hidden');
             document.getElementById('wizard-modal').classList.add('flex');
             resetWizard();
@@ -1051,7 +1167,7 @@
 
         function renderPhotoPreviews() {
             const c = document.getElementById('photo-preview-container');
-            c.innerHTML = newRecordData.photos.map((p, i) => `<div class="relative w-16 h-16 flex-shrink-0 rounded overflow-hidden border shadow-sm"><img src="${p}" class="w-full h-full object-cover"><button onclick="removePhoto(${i})" class="absolute top-0 right-0 bg-red-500 text-white text-xs w-5 h-5 rounded-bl opacity-90"><i class="fas fa-times"></i></button></div>`).join('');
+            c.innerHTML = newRecordData.photos.map((p, i) => `<div class="relative w-16 h-16 flex-shrink-0 rounded-xl overflow-hidden border-2 border-white shadow-sm"><img src="${p}" class="w-full h-full object-cover"><button onclick="removePhoto(${i})" class="absolute top-0 right-0 bg-red-500 text-white text-xs w-6 h-6 rounded-bl-lg shadow"><i class="fas fa-times"></i></button></div>`).join('');
             
             const btnLabel = document.getElementById('btn-foto-label');
             if(btnLabel) {
@@ -1122,21 +1238,23 @@
             if ((currentPiece === 'UPR' || currentPiece === 'POCKET') && !newRecordData.variant) return showNotification("Selecciona la variante.");
             
             if (!currentUser) return showNotification("No hay conexión a la base de datos.");
+            if (!inspectorName) return showNotification("Falta configurar nombre del inspector.");
 
             const btn = document.getElementById('btn-save-record');
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...'; btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin text-2xl"></i> Guardando...'; btn.disabled = true;
 
             try {
                 await addDoc(rechazosRef, {
                     ...newRecordData, pieceType: currentPiece, timestamp: Date.now(), 
-                    dateString: getLocalDateString(), inspectorId: currentUser.uid.substring(0, 4)
+                    dateString: getLocalDateString(), inspectorId: currentUser.uid.substring(0, 4),
+                    inspectorName: inspectorName
                 });
                 document.getElementById('wizard-modal').classList.add('hidden');
                 document.getElementById('wizard-modal').classList.remove('flex');
             } catch (e) {
                 console.error(e); showNotification("Error al guardar en la nube.");
             } finally {
-                btn.innerHTML = '<i class="fas fa-save"></i> Guardar'; btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-save text-2xl"></i> Guardar'; btn.disabled = false;
             }
         });
 
@@ -1230,17 +1348,24 @@
 
         function getHTMLReportForPiece(pieceTarget, dateStr) {
             const records = allRecords.filter(r => (r.pieceType || 'UPR') === pieceTarget && r.dateString === dateStr);
-            if (records.length === 0) return `<div class="text-center py-6"><p class="text-gray-400 font-medium">No se registraron defectos.</p></div>`;
+            if (records.length === 0) return `<div class="text-center py-10 glass-btn rounded-3xl"><p class="text-gray-600 font-bold text-lg">No se registraron defectos.</p></div>`;
 
             const { grouped, totals, totalTarimas } = getGroupedData(records, pieceTarget);
-            const headerColor = pieceTarget === 'UPR' ? 'from-blue-600 to-blue-700' : (pieceTarget === 'COWL' ? 'from-indigo-600 to-indigo-700' : (pieceTarget === 'POCKET' ? 'from-teal-600 to-teal-700' : 'from-emerald-600 to-emerald-700'));
             
-            let summaryText = Object.keys(totals).map(k => `<span class="font-bold text-white bg-black bg-opacity-20 px-2 py-0.5 rounded text-sm">${totals[k]} ${k}</span>`).join(' ');
+            let headerColorClass = 'bg-blue-600';
+            if(pieceTarget === 'COWL') headerColorClass = 'bg-indigo-600';
+            if(pieceTarget === 'POCKET') headerColorClass = 'bg-teal-600';
+            if(pieceTarget === 'COVER') headerColorClass = 'bg-emerald-600';
+
+            let summaryText = Object.keys(totals).map(k => `<span class="font-bold text-white bg-black/20 backdrop-blur-sm border border-white/20 px-3 py-1 rounded-lg text-sm shadow-sm">${totals[k]} ${k}</span>`).join(' ');
             
-            let html = `<div class="mb-4 bg-gradient-to-r ${headerColor} text-white p-4 rounded-xl shadow flex flex-col gap-2"><span class="font-medium text-sm text-white text-opacity-90 uppercase tracking-wide">Total de Registros:</span><div class="flex flex-wrap gap-2">${summaryText}</div></div>`;
+            let html = `<div class="mb-5 ${headerColorClass} text-white p-5 rounded-[2rem] shadow-lg flex flex-col gap-3 border border-white/20 relative overflow-hidden">
+                <div class="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>
+                <div class="relative z-10"><span class="font-black text-sm text-white/90 uppercase tracking-widest block mb-2 drop-shadow-sm">Total Rechazos:</span><div class="flex flex-wrap gap-2">${summaryText}</div></div>
+            </div>`;
             
             if(pieceTarget === 'COVER' && totalTarimas > 0) {
-                html += `<div class="mb-4 bg-emerald-50 border border-emerald-100 p-4 rounded-xl flex justify-between items-center"><span class="font-bold text-emerald-800">Tarimas Revisadas:</span><span class="text-xl font-black text-emerald-600">${totalTarimas}</span></div>`;
+                html += `<div class="mb-5 glass-btn border border-emerald-300 p-5 rounded-[2rem] flex justify-between items-center shadow-sm"><span class="font-black text-emerald-800 uppercase tracking-wide">Tarimas Revisadas:</span><span class="text-3xl font-black text-emerald-600 drop-shadow-sm">${totalTarimas}</span></div>`;
             }
 
             let dmgGroups = {};
@@ -1254,11 +1379,11 @@
                     let detalles = [];
                     if(item.side) detalles.push(item.side);
                     if(item.variant) detalles.push(item.variant);
-                    let detStr = detalles.length > 0 ? `(${detalles.join(', ')})` : '';
-                    return `<div class="flex justify-between items-center py-2 border-b border-gray-50 last:border-0"><div class="flex flex-col"><span class="font-bold text-gray-700 text-sm">${item.type}</span><span class="text-xs text-gray-500">${detStr}</span></div><span class="font-bold text-gray-800 bg-gray-100 px-3 py-1 rounded-full text-sm">${item.qty}</span></div>`;
+                    let detStr = detalles.length > 0 ? `<span class="text-xs text-gray-500 font-bold bg-white/50 px-2 py-0.5 rounded border border-white shadow-sm">${detalles.join(', ')}</span>` : '';
+                    return `<div class="flex justify-between items-center py-3 border-b border-gray-300/30 last:border-0"><div class="flex flex-col gap-1"><span class="font-black text-gray-800 text-base">${item.type}</span>${detStr}</div><span class="font-black text-gray-900 bg-white/70 shadow-inner border border-white px-4 py-1.5 rounded-xl text-lg">${item.qty}</span></div>`;
                 }).join('');
 
-                html += `<div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-3"><h4 class="font-bold text-red-500 text-lg mb-2 pb-2 border-b border-gray-100">${dmg}</h4>${itemsHtml}</div>`;
+                html += `<div class="glass-btn p-5 rounded-[2rem] shadow-sm mb-4 border border-white"><h4 class="font-black text-red-600 text-xl mb-3 pb-3 border-b border-gray-300/50 drop-shadow-sm">${dmg}</h4>${itemsHtml}</div>`;
             });
             return html;
         }
