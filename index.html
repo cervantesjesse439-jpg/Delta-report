@@ -347,11 +347,15 @@
                                 <div class="w-12 h-12 bg-white/80 rounded-full flex items-center justify-center shadow-inner border border-gray-100"><i class="fas fa-slash text-2xl text-gray-600"></i></div>
                                 <span class="font-bold text-gray-900 text-sm text-center">Rayón</span>
                             </button>
+                            <button class="option-btn dmg-btn upr-dmg cowl-dmg pocket-dmg glass-btn p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 border border-white" onclick="selectOption('damage', 'Raspón', 3)">
+                                <div class="w-12 h-12 bg-white/80 rounded-full flex items-center justify-center shadow-inner border border-gray-100"><i class="fas fa-grip-lines text-2xl text-stone-500"></i></div>
+                                <span class="font-bold text-gray-900 text-sm text-center">Raspón</span>
+                            </button>
                             <button class="option-btn dmg-btn upr-dmg pocket-dmg cover-dmg glass-btn p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 border border-white" onclick="selectOption('damage', 'Rebaba', 3)">
                                 <div class="w-12 h-12 bg-white/80 rounded-full flex items-center justify-center shadow-inner border border-gray-100"><i class="fas fa-cut text-2xl text-orange-500"></i></div>
                                 <span class="font-bold text-gray-900 text-sm text-center">Rebaba</span>
                             </button>
-                            <button class="option-btn dmg-btn upr-dmg pocket-dmg cover-dmg glass-btn p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 border border-white" onclick="selectOption('damage', 'Contaminación', 3)">
+                            <button class="option-btn dmg-btn upr-dmg cowl-dmg pocket-dmg cover-dmg glass-btn p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 border border-white" onclick="selectOption('damage', 'Contaminación', 3)">
                                 <div class="w-12 h-12 bg-white/80 rounded-full flex items-center justify-center shadow-inner border border-gray-100"><i class="fas fa-biohazard text-2xl text-green-600"></i></div>
                                 <span class="font-bold text-gray-900 text-sm text-center">Contaminación</span>
                             </button>
@@ -372,8 +376,8 @@
                                 <span class="font-bold text-gray-900 text-sm text-center">Burbuja</span>
                             </button>
                             
-                            <!-- Sin Etiqueta GLOBAL -->
-                            <button class="option-btn dmg-btn upr-dmg cowl-dmg pocket-dmg cover-dmg glass-btn p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 border border-white" onclick="selectOption('damage', 'Sin etiqueta', 3)">
+                            <!-- Sin Etiqueta GLOBAL (Oculto en COWL) -->
+                            <button class="option-btn dmg-btn upr-dmg pocket-dmg cover-dmg glass-btn p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 border border-white" onclick="selectOption('damage', 'Sin etiqueta', 3)">
                                 <div class="w-12 h-12 bg-white/80 rounded-full flex items-center justify-center shadow-inner border border-gray-100"><i class="fas fa-tag text-2xl text-orange-600"></i></div>
                                 <span class="font-bold text-gray-900 text-sm text-center">Sin etiqueta</span>
                             </button>
@@ -668,8 +672,8 @@
             <p class="text-gray-600 font-medium text-sm mb-6 leading-relaxed">Selecciona la fecha para generar el documento PDF estructurado de todas las líneas.</p>
             
             <div class="mb-8">
-                <label for="export-date-picker" class="block font-bold text-gray-800 text-sm mb-2 uppercase tracking-wide">Fecha del reporte:</label>
-                <input type="date" id="export-date-picker" class="w-full bg-white border-2 border-gray-200 text-gray-900 rounded-2xl px-4 py-4 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent shadow-sm">
+                <label for="export-date-picker-pdf" class="block font-bold text-gray-800 text-sm mb-2 uppercase tracking-wide">Fecha del reporte:</label>
+                <input type="date" id="export-date-picker-pdf" class="w-full bg-white border-2 border-gray-200 text-gray-900 rounded-2xl px-4 py-4 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent shadow-sm">
             </div>
 
             <button onclick="downloadPDF()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4.5 rounded-2xl shadow-xl text-lg transition active:scale-95 flex items-center justify-center gap-3 border border-red-500">
@@ -720,8 +724,16 @@
             return new Date(dateString + 'T12:00:00').toLocaleDateString('es-MX', options).replace(/^\w/, c => c.toUpperCase());
         };
 
+        // --- Lógica Principal: MIGRACIÓN DE "SIN ETIQUETA" A "CONTAMINACIÓN" EN COWL ---
         const getFilteredRecords = () => {
-            return allRecords.filter(r => (r.pieceType || 'UPR') === currentPiece);
+            return allRecords.filter(r => (r.pieceType || 'UPR') === currentPiece).map(r => {
+                let correctedRecord = { ...r };
+                // Convierte automáticamente cualquier registro viejo de COWL que diga "Sin etiqueta" a "Contaminación"
+                if (correctedRecord.pieceType === 'COWL' && correctedRecord.damage === 'Sin etiqueta') {
+                    correctedRecord.damage = 'Contaminación';
+                }
+                return correctedRecord;
+            });
         };
 
         // --- SISTEMA DE IDENTIDAD DINÁMICA POR PIEZA ---
@@ -1001,7 +1013,7 @@
 
         window.openRecordDetails = function(id) {
             if (isDeleteMode) return;
-            const r = allRecords.find(x => x.id === id);
+            const r = getFilteredRecords().find(x => x.id === id); // Ya procesado con migración si es COWL
             if (!r) return;
 
             const photoContainer = document.getElementById('details-photos');
@@ -1016,6 +1028,8 @@
             const qtyStr = (r.quantity > 1) ? `(${r.quantity} ${r.type})` : '';
             const palStr = (currentPiece === 'COVER' && r.pallets) ? ` - ${r.pallets} Tarimas` : '';
             document.getElementById('details-title').textContent = `${r.type} ${qtyStr}${palStr}`;
+            
+            // Ya aplicamos la migración antes, así que r.damage ya es correcto ("Contaminación" si aplicaba)
             document.getElementById('details-damage').textContent = r.damage;
             document.getElementById('details-time').textContent = formatTime(r.timestamp);
 
@@ -1307,6 +1321,8 @@
             
             records.forEach(r => {
                 let dmg = r.damage;
+                // La migración de Sin Etiqueta en COWL a Contaminación ya fue procesada en getFilteredRecords
+                
                 let type = r.type || 'Pieza';
                 let side = (r.side && r.side !== 'N/A') ? r.side : '';
                 let variant = (r.variant && r.variant !== 'N/A') ? r.variant : '';
@@ -1347,7 +1363,8 @@
         };
 
         function getHTMLReportForPiece(pieceTarget, dateStr) {
-            const records = allRecords.filter(r => (r.pieceType || 'UPR') === pieceTarget && r.dateString === dateStr);
+            // Aplicamos filter sobre getFilteredRecords para mantener la regla de migración de COWL en el reporte
+            const records = getFilteredRecords().filter(r => r.dateString === dateStr);
             if (records.length === 0) return `<div class="text-center py-10 glass-btn rounded-3xl"><p class="text-gray-600 font-bold text-lg">No se registraron defectos.</p></div>`;
 
             const { grouped, totals, totalTarimas } = getGroupedData(records, pieceTarget);
@@ -1391,7 +1408,7 @@
         // --- EXPORTACIÓN A PDF PROFESIONAL ---
         window.openExportModal = function() {
             const m = document.getElementById('export-date-modal');
-            document.getElementById('export-date-picker').value = getLocalDateString();
+            document.getElementById('export-date-picker-pdf').value = getLocalDateString();
             m.classList.remove('hidden'); m.classList.add('flex');
         };
 
@@ -1406,7 +1423,7 @@
                 return showNotification("No hay registros en la nube.");
             }
 
-            const dateStr = document.getElementById('export-date-picker').value;
+            const dateStr = document.getElementById('export-date-picker-pdf').value;
             const dateStrFormatted = new Date(dateStr + 'T12:00:00').toLocaleDateString('es-MX', { weekday:'long', year:'numeric', month:'long', day:'numeric' }).toUpperCase();
             
             const { jsPDF } = window.jspdf;
@@ -1425,7 +1442,16 @@
             let hasData = false;
 
             piecesList.forEach(piece => {
-                const records = allRecords.filter(r => (r.pieceType || 'UPR') === piece && r.dateString === dateStr);
+                // Al exportar PDF, aplicamos manualmente la regla de migración de COWL a todos los registros
+                const rawRecords = allRecords.filter(r => (r.pieceType || 'UPR') === piece && r.dateString === dateStr);
+                const records = rawRecords.map(r => {
+                    let correctedRecord = { ...r };
+                    if (correctedRecord.pieceType === 'COWL' && correctedRecord.damage === 'Sin etiqueta') {
+                        correctedRecord.damage = 'Contaminación';
+                    }
+                    return correctedRecord;
+                });
+                
                 if (records.length === 0) return;
                 
                 hasData = true;
