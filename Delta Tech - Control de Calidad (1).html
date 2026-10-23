@@ -1,0 +1,1383 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Delta Tech - Control de Calidad</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- Librerías para generar PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .snap-x-mandatory { scroll-snap-type: x mandatory; }
+        .snap-center { scroll-snap-align: center; }
+
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        .slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+        .option-btn {
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+        .option-btn.selected {
+            border-color: currentColor;
+            background-color: #f3f4f6;
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+<body class="text-gray-800 antialiased h-screen flex flex-col overflow-hidden bg-gray-50 relative">
+
+    <!-- LOBBY (Pantalla de Inicio) -->
+    <div id="lobby-screen" class="absolute inset-0 bg-gray-100 z-40 flex flex-col items-center justify-center p-6 fade-in overflow-y-auto">
+        <div class="text-center mb-8 mt-4">
+            <div class="w-20 h-20 bg-gray-800 rounded-3xl flex items-center justify-center text-white text-4xl mx-auto mb-3 shadow-lg">
+                <i class="fas fa-industry"></i>
+            </div>
+            <h1 class="text-3xl font-bold text-gray-800">Delta Tech</h1>
+            <p class="text-gray-500 font-medium">Control de Calidad</p>
+        </div>
+
+        <h2 class="text-lg font-bold text-gray-700 mb-3 w-full max-w-xs text-left">Selecciona la línea:</h2>
+        
+        <div class="flex flex-col gap-3 w-full max-w-xs pb-6">
+            <!-- Pieza UPR -->
+            <button onclick="selectPiece('UPR')" class="bg-white border-2 border-blue-100 hover:border-blue-500 p-5 rounded-2xl shadow-sm flex items-center justify-between transition active:scale-95 group">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-2xl group-hover:bg-blue-600 group-hover:text-white transition">
+                        <i class="fas fa-layer-group"></i>
+                    </div>
+                    <div class="text-left">
+                        <span class="block text-xl font-bold text-gray-800">UPR</span>
+                        <span class="block text-xs text-gray-500 font-medium">Línea Regular</span>
+                    </div>
+                </div>
+                <i class="fas fa-chevron-right text-gray-300 group-hover:text-blue-500"></i>
+            </button>
+
+            <!-- Pieza COWL -->
+            <button onclick="selectPiece('COWL')" class="bg-white border-2 border-indigo-100 hover:border-indigo-500 p-5 rounded-2xl shadow-sm flex items-center justify-between transition active:scale-95 group">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-2xl group-hover:bg-indigo-600 group-hover:text-white transition">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <div class="text-left">
+                        <span class="block text-xl font-bold text-gray-800">COWL</span>
+                        <span class="block text-xs text-gray-500 font-medium">Línea Especial</span>
+                    </div>
+                </div>
+                <i class="fas fa-chevron-right text-gray-300 group-hover:text-indigo-500"></i>
+            </button>
+
+            <!-- Pieza POCKET -->
+            <button onclick="selectPiece('POCKET')" class="bg-white border-2 border-teal-100 hover:border-teal-500 p-5 rounded-2xl shadow-sm flex items-center justify-between transition active:scale-95 group">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 text-2xl group-hover:bg-teal-600 group-hover:text-white transition">
+                        <i class="fas fa-cube"></i>
+                    </div>
+                    <div class="text-left">
+                        <span class="block text-xl font-bold text-gray-800">POCKET</span>
+                        <span class="block text-xs text-gray-500 font-medium">Línea de Cajas</span>
+                    </div>
+                </div>
+                <i class="fas fa-chevron-right text-gray-300 group-hover:text-teal-500"></i>
+            </button>
+
+            <!-- Pieza COVER -->
+            <button onclick="selectPiece('COVER')" class="bg-white border-2 border-emerald-100 hover:border-emerald-500 p-5 rounded-2xl shadow-sm flex items-center justify-between transition active:scale-95 group">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 text-2xl group-hover:bg-emerald-600 group-hover:text-white transition">
+                        <i class="fas fa-box"></i>
+                    </div>
+                    <div class="text-left">
+                        <span class="block text-xl font-bold text-gray-800">COVER</span>
+                        <span class="block text-xs text-gray-500 font-medium">Tarimas / Empaque</span>
+                    </div>
+                </div>
+                <i class="fas fa-chevron-right text-gray-300 group-hover:text-emerald-500"></i>
+            </button>
+        </div>
+
+        <div class="w-full max-w-xs flex justify-between items-center mb-2">
+            <div id="lobby-cloud-status" class="text-sm font-bold text-gray-400 flex items-center gap-2">
+                <i class="fas fa-sync fa-spin"></i> Conectando a la nube...
+            </div>
+        </div>
+
+        <div class="w-full max-w-xs flex justify-start">
+            <button id="btn-open-export" onclick="openExportModal()" class="mt-4 mb-8 text-sm bg-white border border-gray-200 text-gray-700 px-4 py-2.5 rounded-xl shadow-sm font-bold hover:bg-gray-50 transition active:scale-95 flex items-center gap-2">
+                <i class="fas fa-file-pdf text-red-600 text-lg"></i> Descargar Reporte PDF
+            </button>
+        </div>
+    </div>
+
+    <!-- MAIN DASHBOARD -->
+    <div id="main-dashboard" class="flex-1 overflow-y-auto w-full max-w-md mx-auto bg-white shadow-xl relative pb-24 h-full hidden flex-col">
+        
+        <!-- Header -->
+        <header id="main-header" class="bg-blue-600 text-white p-5 rounded-b-3xl shadow-md sticky top-0 z-10 transition-colors duration-300">
+            <div class="flex justify-between items-center mb-2">
+                <div class="flex items-center gap-2">
+                    <button onclick="goBackToLobby()" class="w-8 h-8 flex items-center justify-center rounded-full bg-white bg-opacity-20 hover:bg-opacity-30 transition active:scale-95 mr-1">
+                        <i class="fas fa-arrow-left text-sm"></i>
+                    </button>
+                    <i class="fas fa-industry text-xl"></i>
+                    <h1 class="text-xl font-bold tracking-wide">Delta Tech</h1>
+                </div>
+                <div id="cloud-status" class="flex items-center gap-1 bg-black bg-opacity-20 px-2 py-1 rounded text-xs font-bold" title="Conectando a la nube...">
+                    <i class="fas fa-sync fa-spin"></i> Conectando...
+                </div>
+            </div>
+            <p class="text-white text-opacity-80 text-sm font-medium" id="current-date-display">Cargando fecha...</p>
+            <h2 class="text-2xl font-bold mt-1">Control - <span id="header-piece-name">UPR</span></h2>
+        </header>
+
+        <main class="p-4 flex-1">
+            <div class="flex justify-between items-center mb-3 text-gray-700">
+                <h3 class="text-lg font-bold">Resumen de Hoy</h3>
+                <button onclick="openReportModal()" class="text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded-full font-bold shadow-sm hover:bg-gray-200 transition active:scale-95 flex items-center gap-1">
+                    <i class="fas fa-chart-pie"></i> Reporte
+                </button>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-3 mb-6" id="dashboard-stats-container">
+                <!-- Tarjeta Piezas (UPR/COWL/POCKET) -->
+                <div id="stat-card-piezas" onclick="openReportModal()" class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center relative overflow-hidden cursor-pointer hover:bg-gray-50 transition active:scale-95">
+                    <div class="absolute top-0 w-full h-1 bg-red-400"></div>
+                    <i class="fas fa-puzzle-piece text-red-400 text-2xl mb-2"></i>
+                    <span class="text-3xl font-bold text-gray-800" id="stat-piezas-total">0</span>
+                    <span class="text-xs text-gray-500 uppercase font-semibold">Piezas</span>
+                    <div class="flex w-full justify-between mt-2 text-xs font-medium px-2 gap-2">
+                        <span class="text-blue-600 bg-blue-50 px-2 py-1 rounded">RH: <span id="stat-piezas-rh">0</span></span>
+                        <span class="text-green-600 bg-green-50 px-2 py-1 rounded">LH: <span id="stat-piezas-lh">0</span></span>
+                    </div>
+                </div>
+
+                <!-- Tarjeta Carros (UPR) -->
+                <div id="stat-card-carros" onclick="openReportModal()" class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center relative overflow-hidden cursor-pointer hover:bg-gray-50 transition active:scale-95">
+                    <div class="absolute top-0 w-full h-1 bg-purple-400"></div>
+                    <i class="fas fa-truck text-purple-400 text-2xl mb-2"></i>
+                    <span class="text-3xl font-bold text-gray-800" id="stat-carros-total">0</span>
+                    <span class="text-xs text-gray-500 uppercase font-semibold">Carros</span>
+                    <div class="flex flex-col w-full mt-2 text-xs font-medium gap-1">
+                        <span class="text-gray-600 bg-gray-50 px-2 py-1 rounded flex justify-between"><span>Normal:</span> <span id="stat-carros-normal">0</span></span>
+                        <span class="text-gray-600 bg-gray-50 px-2 py-1 rounded flex justify-between"><span>Grande:</span> <span id="stat-carros-grande">0</span></span>
+                    </div>
+                </div>
+
+                <!-- Tarjeta Cajas (POCKET) -->
+                <div id="stat-card-cajas" onclick="openReportModal()" class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex-col items-center justify-center relative overflow-hidden cursor-pointer hover:bg-gray-50 transition active:scale-95 hidden">
+                    <div class="absolute top-0 w-full h-1 bg-teal-400"></div>
+                    <i class="fas fa-box-open text-teal-400 text-2xl mb-2"></i>
+                    <span class="text-3xl font-bold text-gray-800" id="stat-cajas-total">0</span>
+                    <span class="text-xs text-gray-500 uppercase font-semibold">Cajas</span>
+                    <div class="flex flex-col w-full mt-2 text-xs font-medium gap-1">
+                        <span class="text-gray-600 bg-gray-50 px-2 py-1 rounded flex justify-between"><span>Caja:</span> <span id="stat-cajas-normal">0</span></span>
+                        <span class="text-gray-600 bg-gray-50 px-2 py-1 rounded flex justify-between"><span>Grande:</span> <span id="stat-cajas-grande">0</span></span>
+                    </div>
+                </div>
+                
+                <!-- Tarjeta Tarimas (Solo COVER) -->
+                <div id="stat-card-tarimas" onclick="openReportModal()" class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center relative overflow-hidden cursor-pointer hover:bg-gray-50 transition active:scale-95 col-span-2 hidden">
+                    <div class="absolute top-0 w-full h-1 bg-emerald-400"></div>
+                    <i class="fas fa-pallet text-emerald-500 text-3xl mb-2"></i>
+                    <span class="text-4xl font-bold text-gray-800" id="stat-tarimas-total">0</span>
+                    <span class="text-sm text-gray-500 uppercase font-semibold mt-1">Tarimas Revisadas</span>
+                    <span class="text-xs text-red-600 bg-red-50 px-3 py-1 rounded mt-2 font-bold"><i class="fas fa-times-circle"></i> Piezas Rechazadas: <span id="stat-cover-rechazos">0</span></span>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-end mb-3 mt-8">
+                <h3 class="text-lg font-bold text-gray-700">Bitácora del Equipo</h3>
+                <div id="normal-actions">
+                    <button onclick="toggleDeleteMode()" class="text-xs text-red-500 bg-red-50 px-3 py-1.5 rounded-full border border-red-200 font-medium transition active:scale-95">
+                        <i class="fas fa-list-check"></i> Seleccionar
+                    </button>
+                </div>
+                <div id="delete-actions" class="hidden gap-2">
+                    <button onclick="toggleDeleteMode()" class="text-xs text-gray-600 bg-gray-100 px-3 py-1.5 rounded-full border border-gray-200 font-medium transition active:scale-95">
+                        Cancelar
+                    </button>
+                    <button onclick="confirmDeletion()" id="btn-confirm-delete" class="text-xs text-white bg-red-500 px-3 py-1.5 rounded-full shadow font-medium opacity-50 pointer-events-none transition active:scale-95">
+                        <i class="fas fa-trash"></i> Borrar (0)
+                    </button>
+                </div>
+            </div>
+            
+            <div id="bitacora-list" class="space-y-3 pb-8">
+                <!-- Los registros se inyectarán aquí -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Botón Flotante Registrar -->
+    <div id="btn-registrar-container" class="fixed bottom-0 w-full max-w-md left-1/2 transform -translate-x-1/2 p-4 bg-gradient-to-t from-gray-100 via-gray-100 to-transparent pb-6 z-20 hidden">
+        <button id="btn-open-wizard" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-2xl shadow-lg transform transition active:scale-95 flex items-center justify-center gap-3 text-lg transition-colors duration-300">
+            <i class="fas fa-plus-circle text-2xl"></i>
+            Registrar Rechazo
+        </button>
+    </div>
+
+    <!-- WIZARD MODAL -->
+    <div id="wizard-modal" class="fixed inset-0 bg-black bg-opacity-60 z-50 hidden flex-col justify-end fade-in">
+        <div class="bg-white w-full max-w-md mx-auto rounded-t-3xl h-[85vh] flex flex-col slide-up relative">
+            
+            <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-white rounded-t-3xl z-10 shadow-sm">
+                <div>
+                    <h3 class="text-xl font-bold text-gray-800">Nuevo Registro <span id="wizard-piece-badge" class="bg-gray-100 text-xs px-2 py-1 rounded ml-1 text-gray-600"></span></h3>
+                    <p class="text-sm text-gray-500" id="wizard-step-text">Paso 1: Selecciona Lado</p>
+                </div>
+                <button id="btn-close-wizard" class="w-10 h-10 bg-gray-100 rounded-full text-gray-600 hover:bg-gray-200 flex items-center justify-center transition">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-hidden relative bg-gray-50">
+                <div class="flex w-full h-1 bg-gray-200 absolute top-0 left-0 z-10">
+                    <div id="wizard-progress" class="h-full bg-blue-600 transition-all duration-300" style="width: 16.66%"></div>
+                </div>
+
+                <div id="wizard-slider" class="w-full h-full flex overflow-x-auto snap-x-mandatory hide-scrollbar scroll-smooth">
+                    
+                    <!-- PASO 1: Lado -->
+                    <div class="min-w-full flex flex-col items-center justify-center p-6 snap-center" id="step-1">
+                        <h4 class="text-2xl font-bold mb-8 text-gray-700 text-center">Lado / Orientación</h4>
+                        <div class="grid grid-cols-2 gap-4 w-full">
+                            <button class="option-btn bg-white p-8 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-4 text-blue-600" onclick="selectOption('side', 'RH', 2)">
+                                <div class="w-20 h-20 rounded-full bg-blue-50 flex items-center justify-center text-3xl font-bold border border-blue-100">R</div>
+                                <span class="text-xl font-bold text-gray-800">RH</span>
+                                <span class="text-sm text-gray-500">Derecho</span>
+                            </button>
+                            <button class="option-btn bg-white p-8 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-4 text-green-600" onclick="selectOption('side', 'LH', 2)">
+                                <div class="w-20 h-20 rounded-full bg-green-50 flex items-center justify-center text-3xl font-bold border border-green-100">L</div>
+                                <span class="text-xl font-bold text-gray-800">LH</span>
+                                <span class="text-sm text-gray-500">Izquierdo</span>
+                            </button>
+                            <!-- Opción N/A (Oculta en COVER) -->
+                            <button class="option-btn na-option bg-white p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-2 col-span-2 text-gray-600" onclick="selectOption('side', 'N/A', 2)">
+                                <span class="font-bold text-gray-800">No Aplica (N/A)</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- PASO 2: Daño -->
+                    <div class="min-w-full flex flex-col items-center justify-start p-6 snap-center overflow-y-auto pb-12" id="step-2">
+                        <h4 class="text-2xl font-bold mb-6 text-gray-700 text-center flex-shrink-0">Tipo de Daño</h4>
+                        <div class="grid grid-cols-2 gap-3 w-full pb-8">
+                            
+                            <!-- Daños base -->
+                            <button class="option-btn dmg-btn upr-dmg cowl-dmg pocket-dmg bg-white p-4 rounded-xl shadow-sm flex flex-col items-center justify-center gap-2" onclick="selectOption('damage', 'Ráfaga', 3)">
+                                <i class="fas fa-wind text-2xl text-blue-400"></i><span class="font-bold text-gray-800 text-sm text-center">Ráfaga</span>
+                            </button>
+                            <!-- Golpe (Exclusivo UPR y COWL) -->
+                            <button class="option-btn dmg-btn upr-dmg cowl-dmg bg-white p-4 rounded-xl shadow-sm flex flex-col items-center justify-center gap-2" onclick="selectOption('damage', 'Golpe', 3)">
+                                <i class="fas fa-hammer text-2xl text-red-600"></i><span class="font-bold text-gray-800 text-sm text-center">Golpe</span>
+                            </button>
+                            <button class="option-btn dmg-btn upr-dmg cowl-dmg pocket-dmg bg-white p-4 rounded-xl shadow-sm flex flex-col items-center justify-center gap-2" onclick="selectOption('damage', 'Rayón', 3)">
+                                <i class="fas fa-slash text-2xl text-gray-600"></i><span class="font-bold text-gray-800 text-sm text-center">Rayón</span>
+                            </button>
+                            <!-- Rebaba (Todos excepto COWL) -->
+                            <button class="option-btn dmg-btn upr-dmg pocket-dmg cover-dmg bg-white p-4 rounded-xl shadow-sm flex flex-col items-center justify-center gap-2" onclick="selectOption('damage', 'Rebaba', 3)">
+                                <i class="fas fa-cut text-2xl text-orange-400"></i><span class="font-bold text-gray-800 text-sm text-center">Rebaba</span>
+                            </button>
+                            <!-- Contaminación (Todos excepto COWL) -->
+                            <button class="option-btn dmg-btn upr-dmg pocket-dmg cover-dmg bg-white p-4 rounded-xl shadow-sm flex flex-col items-center justify-center gap-2" onclick="selectOption('damage', 'Contaminación', 3)">
+                                <i class="fas fa-biohazard text-2xl text-green-600"></i><span class="font-bold text-gray-800 text-sm text-center">Contaminación</span>
+                            </button>
+                            <button class="option-btn dmg-btn upr-dmg cowl-dmg pocket-dmg bg-white p-4 rounded-xl shadow-sm flex flex-col items-center justify-center gap-2" onclick="selectOption('damage', 'Mal Retrabajo', 3)">
+                                <i class="fas fa-tools text-2xl text-purple-600"></i><span class="font-bold text-gray-800 text-sm text-center">Mal Retrabajo</span>
+                            </button>
+                            <button class="option-btn dmg-btn upr-dmg cowl-dmg pocket-dmg bg-white p-4 rounded-xl shadow-sm flex flex-col items-center justify-center gap-2" onclick="selectOption('damage', 'Tiro corto', 3)">
+                                <i class="fas fa-compress text-2xl text-red-500"></i><span class="font-bold text-gray-800 text-sm text-center">Tiro corto</span>
+                            </button>
+                            <button class="option-btn dmg-btn upr-dmg cowl-dmg pocket-dmg bg-white p-4 rounded-xl shadow-sm flex flex-col items-center justify-center gap-2" onclick="selectOption('damage', 'Poste fracturado', 3)">
+                                <i class="fas fa-cube text-2xl text-purple-500"></i><span class="font-bold text-gray-800 text-sm text-center">Poste fracturado</span>
+                            </button>
+                            <button class="option-btn dmg-btn upr-dmg cowl-dmg pocket-dmg bg-white p-4 rounded-xl shadow-sm flex flex-col items-center justify-center gap-2" onclick="selectOption('damage', 'Burbuja', 3)">
+                                <i class="fas fa-droplet text-2xl text-blue-400"></i><span class="font-bold text-gray-800 text-sm text-center">Burbuja</span>
+                            </button>
+                            
+                            <!-- Sin Etiqueta GLOBAL (UPR, COWL, POCKET, COVER) -->
+                            <button class="option-btn dmg-btn upr-dmg cowl-dmg pocket-dmg cover-dmg bg-white p-4 rounded-xl shadow-sm flex flex-col items-center justify-center gap-2" onclick="selectOption('damage', 'Sin etiqueta', 3)">
+                                <i class="fas fa-tag text-2xl text-orange-500"></i><span class="font-bold text-gray-800 text-sm text-center">Sin etiqueta</span>
+                            </button>
+                            
+                            <!-- Exclusivos UPR -->
+                            <button class="option-btn dmg-btn upr-dmg bg-white p-4 rounded-xl shadow-sm flex flex-col items-center justify-center gap-2" onclick="selectOption('damage', 'Exceso de brillo', 3)">
+                                <i class="fas fa-sun text-2xl text-yellow-500"></i><span class="font-bold text-gray-800 text-sm text-center">Exceso de brillo</span>
+                            </button>
+
+                            <!-- Exclusivos COWL -->
+                            <button class="option-btn dmg-btn cowl-dmg bg-white p-4 rounded-xl shadow-sm flex flex-col items-center justify-center gap-2" onclick="selectOption('damage', 'Tornillo', 3)">
+                                <i class="fas fa-screw text-2xl text-gray-600"></i><span class="font-bold text-gray-800 text-sm text-center">Tornillo</span>
+                            </button>
+                            <button class="option-btn dmg-btn cowl-dmg bg-white p-4 rounded-xl shadow-sm flex flex-col items-center justify-center gap-2" onclick="selectOption('damage', 'Falta de torque', 3)">
+                                <i class="fas fa-wrench text-2xl text-orange-600"></i><span class="font-bold text-gray-800 text-sm text-center">Falta de torque</span>
+                            </button>
+                            <button class="option-btn dmg-btn cowl-dmg bg-white p-4 rounded-xl shadow-sm flex flex-col items-center justify-center gap-2" onclick="selectOption('damage', 'Marca de molde', 3)">
+                                <i class="fas fa-stamp text-2xl text-teal-600"></i><span class="font-bold text-gray-800 text-sm text-center">Marca de molde</span>
+                            </button>
+
+                            <!-- Exclusivos COVER -->
+                            <button class="option-btn dmg-btn cover-dmg bg-white p-4 rounded-xl shadow-sm flex flex-col items-center justify-center gap-2" onclick="selectOption('damage', 'Sin componentes', 3)">
+                                <i class="fas fa-box-open text-2xl text-red-500"></i><span class="font-bold text-gray-800 text-sm text-center">Sin componentes</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- PASO 3: Variante (Color / Tamaño) - Oculto en COWL y COVER -->
+                    <div class="min-w-full flex flex-col items-center justify-center p-6 snap-center" id="step-3">
+                        <h4 class="text-2xl font-bold mb-8 text-gray-700 text-center" id="step-3-title">Variante</h4>
+                        <div class="grid grid-cols-2 gap-4 w-full">
+                            
+                            <!-- Colores Exclusivos UPR -->
+                            <button class="option-btn bg-white p-6 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 text-gray-800 color-upr" onclick="selectOption('color', 'Negro', 4)">
+                                <div class="w-12 h-12 rounded-full bg-gray-900 shadow-inner"></div>
+                                <span class="text-lg font-bold">Negro</span>
+                            </button>
+                            <button class="option-btn bg-white p-6 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 text-gray-800 color-upr" onclick="selectOption('color', 'Gris', 4)">
+                                <div class="w-12 h-12 rounded-full bg-gray-400 shadow-inner"></div>
+                                <span class="text-lg font-bold">Gris</span>
+                            </button>
+                            <button class="option-btn bg-white p-6 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 text-gray-800 color-upr" onclick="selectOption('color', 'Café', 4)">
+                                <div class="w-12 h-12 rounded-full bg-amber-800 shadow-inner"></div>
+                                <span class="text-lg font-bold">Café</span>
+                            </button>
+                            <button class="option-btn bg-white p-6 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 text-gray-800 color-upr" onclick="selectOption('color', 'Verde', 4)">
+                                <div class="w-12 h-12 rounded-full bg-green-700 shadow-inner"></div>
+                                <span class="text-lg font-bold">Verde</span>
+                            </button>
+                            <button class="option-btn bg-white p-3 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-2 col-span-2 text-gray-600 color-upr na-option" onclick="selectOption('color', 'N/A', 4)">
+                                <span class="font-bold">No Aplica (N/A)</span>
+                            </button>
+
+                            <!-- Tamaños Exclusivos POCKET -->
+                            <button class="option-btn bg-white p-8 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-4 text-blue-600 size-pocket hidden" onclick="selectOption('size', 'Grande', 4)">
+                                <div class="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center text-3xl border border-blue-100"><i class="fas fa-expand-arrows-alt"></i></div>
+                                <span class="text-xl font-bold text-gray-800">Grande</span>
+                            </button>
+                            <button class="option-btn bg-white p-8 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-4 text-teal-600 size-pocket hidden" onclick="selectOption('size', 'Chico', 4)">
+                                <div class="w-16 h-16 rounded-full bg-teal-50 flex items-center justify-center text-3xl border border-teal-100"><i class="fas fa-compress-arrows-alt"></i></div>
+                                <span class="text-xl font-bold text-gray-800">Chico</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- PASO 4: Tipo (Pieza / Carro / Caja) - Oculto en COWL y COVER -->
+                    <div class="min-w-full flex flex-col items-center justify-center p-6 snap-center" id="step-4">
+                        <h4 class="text-2xl font-bold mb-6 text-gray-700 text-center">¿Qué presentación es?</h4>
+                        <div class="flex flex-col gap-4 w-full">
+                            
+                            <!-- Opción Pieza (UPR / POCKET) -->
+                            <button class="option-btn type-btn type-upr type-pocket bg-white p-5 rounded-2xl shadow-sm flex items-center gap-4" onclick="selectOption('type', 'Pieza', 5)">
+                                <div class="w-14 h-14 rounded-xl bg-red-100 flex items-center justify-center text-red-500 text-2xl">
+                                    <i class="fas fa-puzzle-piece"></i>
+                                </div>
+                                <div class="text-left flex-1">
+                                    <span class="block text-lg font-bold text-gray-800">Pieza(s)</span>
+                                    <span class="block text-sm text-gray-500">Unidades individuales</span>
+                                </div>
+                                <i class="fas fa-chevron-right text-gray-300"></i>
+                            </button>
+                            
+                            <!-- Opciones solo UPR -->
+                            <button class="option-btn type-btn type-upr bg-white p-5 rounded-2xl shadow-sm flex items-center gap-4 hidden" onclick="selectOption('type', 'Carro Normal', 5)">
+                                <div class="w-14 h-14 rounded-xl bg-purple-100 flex items-center justify-center text-purple-500 text-2xl">
+                                    <i class="fas fa-truck"></i>
+                                </div>
+                                <div class="text-left flex-1">
+                                    <span class="block text-lg font-bold text-gray-800">Carro Normal</span>
+                                    <span class="block text-sm text-gray-500">Lote en carro estándar</span>
+                                </div>
+                                <i class="fas fa-chevron-right text-gray-300"></i>
+                            </button>
+
+                            <button class="option-btn type-btn type-upr bg-white p-5 rounded-2xl shadow-sm flex items-center gap-4 hidden" onclick="selectOption('type', 'Carro Grande', 5)">
+                                <div class="w-14 h-14 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-500 text-2xl">
+                                    <i class="fas fa-truck-moving"></i>
+                                </div>
+                                <div class="text-left flex-1">
+                                    <span class="block text-lg font-bold text-gray-800">Carro Grande</span>
+                                    <span class="block text-sm text-gray-500">Lote en carro extendido</span>
+                                </div>
+                                <i class="fas fa-chevron-right text-gray-300"></i>
+                            </button>
+
+                            <!-- Opciones solo POCKET -->
+                            <button class="option-btn type-btn type-pocket bg-white p-5 rounded-2xl shadow-sm flex items-center gap-4 hidden" onclick="selectOption('type', 'Caja', 5)">
+                                <div class="w-14 h-14 rounded-xl bg-teal-100 flex items-center justify-center text-teal-500 text-2xl">
+                                    <i class="fas fa-box-open"></i>
+                                </div>
+                                <div class="text-left flex-1">
+                                    <span class="block text-lg font-bold text-gray-800">Caja</span>
+                                    <span class="block text-sm text-gray-500">Lote en caja normal</span>
+                                </div>
+                                <i class="fas fa-chevron-right text-gray-300"></i>
+                            </button>
+
+                            <button class="option-btn type-btn type-pocket bg-white p-5 rounded-2xl shadow-sm flex items-center gap-4 hidden" onclick="selectOption('type', 'Caja Grande', 5)">
+                                <div class="w-14 h-14 rounded-xl bg-amber-100 flex items-center justify-center text-amber-500 text-2xl">
+                                    <i class="fas fa-box"></i>
+                                </div>
+                                <div class="text-left flex-1">
+                                    <span class="block text-lg font-bold text-gray-800">Caja Grande</span>
+                                    <span class="block text-sm text-gray-500">Lote en caja extendida</span>
+                                </div>
+                                <i class="fas fa-chevron-right text-gray-300"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- PASO 5: Cantidad y Fotos -->
+                    <div class="min-w-full flex flex-col items-center justify-start p-6 snap-center overflow-y-auto pb-24" id="step-5">
+                        <h4 class="text-2xl font-bold mb-4 text-gray-700 text-center">Cantidades y Evidencia</h4>
+
+                        <!-- Tarimas Revisadas (Exclusivo para COVER) -->
+                        <div id="cover-pallets-container" class="w-full bg-emerald-50 p-5 rounded-2xl shadow-sm mb-4 border border-emerald-100 hidden">
+                            <span class="block text-sm font-bold text-emerald-700 mb-3 text-center uppercase tracking-wider"><i class="fas fa-pallet"></i> Tarimas Revisadas</span>
+                            <div class="flex items-center justify-center gap-6">
+                                <button onclick="changePallets(-1)" class="w-12 h-12 rounded-full bg-white border border-emerald-200 flex items-center justify-center text-xl font-bold text-emerald-600 hover:bg-emerald-100 transition shadow-sm"><i class="fas fa-minus"></i></button>
+                                <span id="record-pallets" class="text-4xl font-bold text-emerald-800 w-16 text-center">1</span>
+                                <button onclick="changePallets(1)" class="w-12 h-12 rounded-full bg-emerald-600 border border-emerald-600 flex items-center justify-center text-xl font-bold text-white hover:bg-emerald-700 transition shadow-sm"><i class="fas fa-plus"></i></button>
+                            </div>
+                        </div>
+
+                        <!-- Cantidad de Registros / Piezas Rechazadas -->
+                        <div class="w-full bg-white p-5 rounded-2xl shadow-sm mb-4 border border-gray-100">
+                            <span id="lbl-cantidad-rechazos" class="block text-sm font-bold text-gray-500 mb-3 text-center uppercase tracking-wider">Cantidad</span>
+                            <div class="flex items-center justify-center gap-6">
+                                <button onclick="changeQuantity(-1)" class="w-12 h-12 rounded-full bg-gray-50 border border-gray-200 flex items-center justify-center text-xl font-bold text-gray-600 hover:bg-gray-100 transition"><i class="fas fa-minus"></i></button>
+                                <span id="record-quantity" class="text-4xl font-bold text-gray-800 w-16 text-center">1</span>
+                                <button onclick="changeQuantity(1)" class="w-12 h-12 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-xl font-bold text-blue-600 hover:bg-blue-100 transition"><i class="fas fa-plus"></i></button>
+                            </div>
+                        </div>
+
+                        <!-- Fotos -->
+                        <div class="w-full bg-white p-5 rounded-2xl shadow-sm mb-6 border border-gray-100 flex flex-col items-center">
+                            <span class="block text-sm font-bold text-gray-500 mb-3 text-center uppercase tracking-wider">Evidencia (Opcional)</span>
+                            <label id="btn-foto-label" for="camera-input" class="w-full py-4 bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center gap-2 text-gray-500 cursor-pointer hover:bg-gray-100 transition">
+                                <i class="fas fa-camera text-2xl mb-1 text-gray-400"></i>
+                                <span class="text-sm font-medium">Añadir foto</span>
+                                <input type="file" id="camera-input" accept="image/*" class="hidden" onchange="handlePhotos(event)">
+                            </label>
+                            <div id="photo-preview-container" class="flex gap-2 mt-4 overflow-x-auto w-full max-w-full pb-2 hide-scrollbar"></div>
+                        </div>
+
+                        <button onclick="goToStep(6)" class="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-4 rounded-xl shadow-md text-lg transition active:scale-95 flex items-center justify-center gap-2">
+                            Continuar <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+
+                    <!-- PASO 6: Confirmación -->
+                    <div class="min-w-full flex flex-col items-center p-6 snap-center overflow-y-auto pb-24" id="step-6">
+                        <h4 class="text-2xl font-bold mb-4 text-gray-700 text-center">Confirmar Registro</h4>
+                        
+                        <div class="w-full bg-white rounded-2xl shadow-sm p-6 mb-6 border border-gray-100">
+                            <div class="flex justify-between items-center py-2 border-b border-gray-50">
+                                <span class="text-gray-500">Línea</span>
+                                <span class="font-bold text-lg text-gray-800" id="summary-piece">-</span>
+                            </div>
+                            <div class="flex justify-between items-center py-2 border-b border-gray-50">
+                                <span class="text-gray-500">Daño</span>
+                                <span class="font-bold text-lg text-red-500" id="summary-damage">-</span>
+                            </div>
+                            <div class="flex justify-between items-center py-2 border-b border-gray-50">
+                                <span class="text-gray-500">Lado</span>
+                                <span class="font-bold text-lg" id="summary-side">-</span>
+                            </div>
+                            <div id="summary-variant-row" class="flex justify-between items-center py-2 border-b border-gray-50">
+                                <span class="text-gray-500" id="summary-variant-label">Variante</span>
+                                <span class="font-bold text-lg" id="summary-variant-value">-</span>
+                            </div>
+                            <div id="summary-type-row" class="flex justify-between items-center py-2 border-b border-gray-50">
+                                <span class="text-gray-500">Presentación</span>
+                                <span class="font-bold text-lg" id="summary-type">-</span>
+                            </div>
+                            <div id="summary-pallets-row" class="flex justify-between items-center py-2 border-b border-gray-50 hidden">
+                                <span class="text-gray-500">Tarimas Revisadas</span>
+                                <span class="font-bold text-lg text-emerald-600" id="summary-pallets">1</span>
+                            </div>
+                            <div class="flex justify-between items-center py-2 border-b border-gray-50">
+                                <span class="text-gray-500" id="summary-lbl-cantidad">Cantidad</span>
+                                <span class="font-bold text-lg text-blue-600" id="summary-quantity">1</span>
+                            </div>
+                        </div>
+
+                        <button id="btn-save-record" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-md text-lg transition active:scale-95 flex items-center justify-center gap-2">
+                            <i class="fas fa-save"></i> Guardar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Detalles de Registro (Fotos y Clonar) -->
+    <div id="record-details-modal" class="fixed inset-0 bg-black bg-opacity-90 z-[60] hidden flex-col fade-in">
+        <div class="flex justify-end p-4">
+            <button onclick="closeRecordDetails()" class="w-10 h-10 bg-gray-800 rounded-full text-white flex items-center justify-center text-xl hover:bg-gray-700 transition active:scale-95"><i class="fas fa-times"></i></button>
+        </div>
+        
+        <div id="details-photos" class="flex-1 overflow-x-auto snap-x-mandatory flex hide-scrollbar items-center gap-4 px-4 pb-4">
+            <!-- Las imágenes se inyectan aquí -->
+        </div>
+        
+        <div class="bg-white rounded-t-3xl p-6 slide-up shadow-2xl">
+            <div class="flex justify-between items-start mb-1">
+                <h3 id="details-title" class="text-xl font-bold text-gray-800">-</h3>
+                <span id="details-time" class="text-sm font-medium text-gray-400"></span>
+            </div>
+            <p id="details-damage" class="text-red-500 font-bold text-lg mb-2">-</p>
+            <div id="details-badges" class="flex flex-wrap gap-2 mb-6">
+                <!-- Badges de lado/color se inyectan aquí -->
+            </div>
+            
+            <div class="flex items-center justify-between mb-4 bg-gray-50 p-3 rounded-xl border border-gray-100">
+                <span class="text-sm font-bold text-gray-600">Cantidad a añadir:</span>
+                <div class="flex items-center gap-4">
+                    <button onclick="changeCloneQuantity(-1)" class="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-lg font-bold text-gray-600 hover:bg-gray-100 transition shadow-sm"><i class="fas fa-minus"></i></button>
+                    <span id="clone-quantity" class="text-2xl font-bold text-gray-800 w-8 text-center">1</span>
+                    <button onclick="changeCloneQuantity(1)" class="w-10 h-10 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-lg font-bold text-blue-600 hover:bg-blue-100 transition shadow-sm"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+
+            <button id="btn-duplicate-record" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg text-lg transition active:scale-95 flex items-center justify-center gap-2">
+                <i class="fas fa-copy text-xl"></i> Registrar más iguales
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal de Reporte Diario Inteligente -->
+    <div id="report-modal" class="fixed inset-0 bg-black bg-opacity-60 z-[55] hidden flex-col justify-end fade-in">
+        <div class="bg-white w-full max-w-md mx-auto rounded-t-3xl h-[85vh] flex flex-col slide-up relative">
+            <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-white rounded-t-3xl z-10 shadow-sm">
+                <div>
+                    <h3 class="text-xl font-bold text-gray-800">Reporte <span id="report-piece-badge" class="bg-gray-200 text-xs px-2 py-1 rounded ml-1 text-gray-700"></span></h3>
+                    <p class="text-sm text-gray-500">Solo defectos registrados</p>
+                </div>
+                <button onclick="closeReportModal()" class="w-10 h-10 bg-gray-100 rounded-full text-gray-600 hover:bg-gray-200 flex items-center justify-center transition active:scale-95">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="p-4 bg-white border-b border-gray-100 flex items-center gap-3 shadow-sm z-10">
+                <label for="report-date-picker" class="font-bold text-gray-700 text-sm">Fecha:</label>
+                <input type="date" id="report-date-picker" class="flex-1 bg-gray-50 border border-gray-300 text-gray-800 rounded-lg px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500" onchange="generateReportContent()">
+            </div>
+
+            <div id="report-content" class="flex-1 overflow-y-auto p-4 bg-gray-50 space-y-3 pb-24">
+                <!-- Contenido generado dinámicamente -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Seleccionar Fecha y Generar PDF -->
+    <div id="export-date-modal" class="fixed inset-0 bg-black bg-opacity-60 z-[60] hidden flex-col justify-end fade-in">
+        <div class="bg-white w-full max-w-md mx-auto rounded-t-3xl p-6 slide-up shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-gray-800">Descargar PDF Oficial</h3>
+                <button onclick="closeExportModal()" class="text-gray-400 hover:text-gray-700 transition">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <p class="text-gray-500 text-sm mb-4">Selecciona la fecha para generar el documento PDF con los resultados organizados de todas las líneas.</p>
+            
+            <div class="mb-6">
+                <label for="export-date-picker" class="block font-bold text-gray-700 text-sm mb-2">Fecha del reporte:</label>
+                <input type="date" id="export-date-picker" class="w-full bg-gray-50 border border-gray-300 text-gray-800 rounded-xl px-4 py-3 text-lg font-medium focus:outline-none focus:ring-2 focus:ring-red-500">
+            </div>
+
+            <button onclick="downloadPDF()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-xl shadow-lg text-lg transition active:scale-95 flex items-center justify-center gap-2">
+                <i class="fas fa-file-pdf"></i> Generar Archivo PDF
+            </button>
+        </div>
+    </div>
+
+    <!-- Notificaciones -->
+    <div id="top-alert" class="fixed top-0 left-0 w-full bg-red-500 text-white p-3 text-center text-sm font-bold shadow-md z-[100] transform -translate-y-full transition-transform duration-300 flex items-center justify-center gap-2">
+        <i class="fas fa-exclamation-triangle"></i> <span id="top-alert-msg"></span>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // 🚨 CONFIGURACIÓN DE FIREBASE 🚨
+        let firebaseConfig = {
+            apiKey: "AIzaSyC6-UX4jsL4nfyprVw1PviZzHwnKbWLipA",
+            authDomain: "delta-9c75f.firebaseapp.com",
+            projectId: "delta-9c75f",
+            storageBucket: "delta-9c75f.firebasestorage.app",
+            messagingSenderId: "901178031655",
+            appId: "1:901178031655:web:5d7f41aedede352ea71802",
+            measurementId: "G-0QY5CJP0ED"
+        };
+
+        let allRecords = [];
+        let newRecordData = { side: null, damage: null, color: null, size: null, type: null, quantity: 1, pallets: 1, photos: [] };
+        let db, auth, currentUser, rechazosRef;
+        let isDeleteMode = false;
+        let selectedForDeletion = new Set();
+        let currentPiece = null; 
+        let cloneQuantityValue = 1;
+
+        const getLocalDateString = () => {
+            const now = new Date();
+            return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        };
+
+        const formatDateToDisplay = (dateString) => {
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            return new Date(dateString + 'T12:00:00').toLocaleDateString('es-MX', options).replace(/^\w/, c => c.toUpperCase());
+        };
+
+        const getFilteredRecords = () => {
+            return allRecords.filter(r => (r.pieceType || 'UPR') === currentPiece);
+        };
+
+        async function initApp() {
+            document.getElementById('current-date-display').textContent = formatDateToDisplay(getLocalDateString());
+            
+            try {
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+                rechazosRef = collection(db, 'rechazos_delta');
+
+                await signInAnonymously(auth);
+                currentUser = auth.currentUser;
+
+                onSnapshot(rechazosRef, (snapshot) => {
+                    allRecords = [];
+                    snapshot.forEach(docSnap => allRecords.push({ id: docSnap.id, ...docSnap.data() }));
+                    
+                    document.getElementById('cloud-status').innerHTML = '<i class="fas fa-cloud text-green-300"></i> En línea';
+                    document.getElementById('lobby-cloud-status').innerHTML = '<i class="fas fa-cloud text-green-500"></i> Nube Sincronizada';
+                    
+                    if(currentPiece) {
+                        updateDashboard();
+                        renderBitacora();
+                    }
+                }, (error) => {
+                    console.error(error);
+                    document.getElementById('cloud-status').innerHTML = '<i class="fas fa-exclamation-triangle text-red-300"></i> Error Base Datos';
+                });
+
+            } catch (error) {
+                console.error(error);
+                document.getElementById('cloud-status').innerHTML = '<i class="fas fa-wifi text-red-300"></i> Sin conexión';
+            }
+        }
+
+        window.selectPiece = function(piece) {
+            currentPiece = piece;
+            
+            document.getElementById('lobby-screen').classList.add('hidden');
+            document.getElementById('main-dashboard').classList.remove('hidden', 'flex');
+            document.getElementById('main-dashboard').classList.add('flex');
+            document.getElementById('btn-registrar-container').classList.remove('hidden');
+
+            const header = document.getElementById('main-header');
+            const wizardProgress = document.getElementById('wizard-progress');
+            const btnSaveRecord = document.getElementById('btn-save-record');
+            const btnOpenWizard = document.getElementById('btn-open-wizard');
+            
+            document.getElementById('header-piece-name').textContent = piece;
+            document.getElementById('wizard-piece-badge').textContent = piece;
+            document.getElementById('report-piece-badge').textContent = piece;
+
+            header.className = 'text-white p-5 rounded-b-3xl shadow-md sticky top-0 z-10 transition-colors duration-300';
+            wizardProgress.className = 'h-full transition-all duration-300';
+            btnSaveRecord.className = 'w-full text-white font-bold py-4 rounded-xl shadow-md text-lg transition active:scale-95 flex items-center justify-center gap-2';
+            btnOpenWizard.className = 'w-full text-white font-bold py-4 px-6 rounded-2xl shadow-lg transform transition active:scale-95 flex items-center justify-center gap-3 text-lg transition-colors duration-300';
+            
+            document.querySelectorAll('.dmg-btn').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.type-btn').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.na-option').forEach(el => el.classList.remove('hidden'));
+            document.querySelectorAll('.color-upr').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.size-pocket').forEach(el => el.classList.add('hidden'));
+            document.getElementById('summary-variant-row').classList.add('hidden');
+            
+            document.getElementById('stat-card-piezas').classList.remove('hidden', 'col-span-2');
+            document.getElementById('stat-card-carros').classList.add('hidden');
+            document.getElementById('stat-card-carros').classList.remove('flex');
+            document.getElementById('stat-card-cajas').classList.add('hidden');
+            document.getElementById('stat-card-cajas').classList.remove('flex');
+            document.getElementById('stat-card-tarimas').classList.add('hidden');
+            
+            document.getElementById('lbl-cantidad-rechazos').textContent = "Cantidad";
+            document.getElementById('summary-lbl-cantidad').textContent = "Cantidad";
+            document.getElementById('cover-pallets-container').classList.add('hidden');
+            document.getElementById('summary-pallets-row').classList.add('hidden');
+            document.getElementById('summary-type-row').classList.remove('hidden');
+
+            if(piece === 'UPR') {
+                header.classList.add('bg-blue-600'); wizardProgress.classList.add('bg-blue-600');
+                btnSaveRecord.classList.add('bg-blue-600', 'hover:bg-blue-700'); btnOpenWizard.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                
+                document.querySelectorAll('.upr-dmg').forEach(el => el.classList.remove('hidden'));
+                document.querySelectorAll('.type-upr').forEach(el => el.classList.remove('hidden'));
+                document.querySelectorAll('.color-upr').forEach(el => el.classList.remove('hidden'));
+                
+                document.getElementById('step-4').classList.remove('hidden'); document.getElementById('step-4').classList.add('flex');
+                document.getElementById('stat-card-carros').classList.remove('hidden'); document.getElementById('stat-card-carros').classList.add('flex');
+                
+                document.getElementById('step-3-title').textContent = 'Color';
+                document.getElementById('summary-variant-label').textContent = 'Color';
+                document.getElementById('summary-variant-row').classList.remove('hidden');
+
+            } else if (piece === 'COWL') {
+                header.classList.add('bg-indigo-700'); wizardProgress.classList.add('bg-indigo-600');
+                btnSaveRecord.classList.add('bg-indigo-600', 'hover:bg-indigo-700'); btnOpenWizard.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+                
+                document.querySelectorAll('.cowl-dmg').forEach(el => el.classList.remove('hidden'));
+                document.getElementById('step-4').classList.remove('flex'); document.getElementById('step-4').classList.add('hidden');
+                document.getElementById('summary-type-row').classList.add('hidden');
+                document.getElementById('stat-card-piezas').classList.add('col-span-2');
+
+            } else if (piece === 'POCKET') {
+                header.classList.add('bg-teal-600'); wizardProgress.classList.add('bg-teal-500');
+                btnSaveRecord.classList.add('bg-teal-600', 'hover:bg-teal-700'); btnOpenWizard.classList.add('bg-teal-600', 'hover:bg-teal-700');
+                
+                document.querySelectorAll('.pocket-dmg').forEach(el => el.classList.remove('hidden'));
+                document.querySelectorAll('.type-pocket').forEach(el => el.classList.remove('hidden'));
+                document.querySelectorAll('.size-pocket').forEach(el => el.classList.remove('hidden'));
+                
+                document.getElementById('step-4').classList.remove('hidden'); document.getElementById('step-4').classList.add('flex');
+                document.getElementById('stat-card-cajas').classList.remove('hidden'); document.getElementById('stat-card-cajas').classList.add('flex');
+                
+                document.getElementById('step-3-title').textContent = 'Tamaño';
+                document.getElementById('summary-variant-label').textContent = 'Tamaño';
+                document.getElementById('summary-variant-row').classList.remove('hidden');
+
+            } else if (piece === 'COVER') {
+                header.classList.add('bg-emerald-600'); wizardProgress.classList.add('bg-emerald-600');
+                btnSaveRecord.classList.add('bg-emerald-600', 'hover:bg-emerald-700'); btnOpenWizard.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
+                
+                document.querySelectorAll('.cover-dmg').forEach(el => el.classList.remove('hidden'));
+                document.getElementById('step-4').classList.remove('flex'); document.getElementById('step-4').classList.add('hidden');
+                document.getElementById('summary-type-row').classList.add('hidden');
+                
+                document.getElementById('stat-card-piezas').classList.add('hidden');
+                document.getElementById('stat-card-tarimas').classList.remove('hidden');
+                document.getElementById('cover-pallets-container').classList.remove('hidden');
+                document.getElementById('summary-pallets-row').classList.remove('hidden');
+                
+                document.getElementById('lbl-cantidad-rechazos').textContent = "Piezas Rechazadas";
+                document.getElementById('summary-lbl-cantidad').textContent = "Piezas Rechazadas";
+                document.querySelectorAll('.na-option').forEach(el => el.classList.add('hidden'));
+            }
+
+            updateDashboard();
+            renderBitacora();
+        };
+
+        window.goBackToLobby = function() {
+            currentPiece = null;
+            document.getElementById('lobby-screen').classList.remove('hidden');
+            document.getElementById('main-dashboard').classList.add('hidden');
+            document.getElementById('btn-registrar-container').classList.add('hidden');
+        };
+
+        function updateDashboard() {
+            const todayStr = getLocalDateString();
+            const records = getFilteredRecords().filter(r => r.dateString === todayStr);
+            
+            let stats = { piezasTotal: 0, rh: 0, lh: 0, carrosTotal: 0, carrosNormal: 0, carrosGrande: 0, cajasTotal: 0, cajaNormal: 0, cajaGrande: 0, tarimas: 0 };
+
+            records.forEach(r => {
+                let qty = r.quantity || 1;
+                let pallets = r.pallets || 0;
+                
+                if (currentPiece === 'COVER') {
+                    stats.piezasTotal += qty;
+                    stats.tarimas += pallets;
+                } else if (currentPiece === 'POCKET') {
+                    if (r.type === 'Pieza') { stats.piezasTotal += qty; if (r.side === 'RH') stats.rh += qty; if (r.side === 'LH') stats.lh += qty; }
+                    else if (r.type === 'Caja') { stats.cajasTotal += qty; stats.cajaNormal += qty; }
+                    else if (r.type === 'Caja Grande') { stats.cajasTotal += qty; stats.cajaGrande += qty; }
+                } else { 
+                    if (r.type === 'Pieza') { stats.piezasTotal += qty; if (r.side === 'RH') stats.rh += qty; if (r.side === 'LH') stats.lh += qty; }
+                    else if (r.type === 'Carro Normal') { stats.carrosTotal += qty; stats.carrosNormal += qty; }
+                    else if (r.type === 'Carro Grande') { stats.carrosTotal += qty; stats.carrosGrande += qty; }
+                }
+            });
+
+            document.getElementById('stat-piezas-total').textContent = stats.piezasTotal;
+            document.getElementById('stat-piezas-rh').textContent = stats.rh;
+            document.getElementById('stat-piezas-lh').textContent = stats.lh;
+            document.getElementById('stat-carros-total').textContent = stats.carrosTotal;
+            document.getElementById('stat-carros-normal').textContent = stats.carrosNormal;
+            document.getElementById('stat-carros-grande').textContent = stats.carrosGrande;
+            document.getElementById('stat-cajas-total').textContent = stats.cajasTotal;
+            document.getElementById('stat-cajas-normal').textContent = stats.cajaNormal;
+            document.getElementById('stat-cajas-grande').textContent = stats.cajaGrande;
+            document.getElementById('stat-tarimas-total').textContent = stats.tarimas;
+            document.getElementById('stat-cover-rechazos').textContent = stats.piezasTotal;
+        }
+
+        function renderBitacora() {
+            const container = document.getElementById('bitacora-list');
+            container.innerHTML = '';
+            const records = getFilteredRecords().sort((a, b) => b.timestamp - a.timestamp);
+
+            if (records.length === 0) {
+                container.innerHTML = `<div class="text-center py-8 text-gray-400 text-sm bg-white rounded-xl border border-gray-100"><i class="fas fa-clipboard-list text-3xl mb-2 text-gray-200"></i><p>No hay registros para ${currentPiece}.</p></div>`;
+                return;
+            }
+
+            let currentGroupDate = null;
+            records.forEach(r => {
+                if (r.dateString !== currentGroupDate) {
+                    currentGroupDate = r.dateString;
+                    const header = document.createElement('div');
+                    header.className = 'text-xs font-bold text-gray-500 uppercase mt-4 mb-2 px-2 tracking-wider';
+                    header.textContent = currentGroupDate === getLocalDateString() ? 'Hoy' : currentGroupDate;
+                    container.appendChild(header);
+                }
+
+                let iconClass = 'fa-puzzle-piece text-red-500 bg-red-100';
+                if (r.type && r.type.includes('Carro')) iconClass = 'fa-truck text-purple-500 bg-purple-100';
+                if (r.type && r.type.includes('Caja')) iconClass = 'fa-box-open text-teal-600 bg-teal-100';
+                
+                const sideColor = r.side === 'RH' ? 'text-blue-600 bg-blue-50' : (r.side === 'LH' ? 'text-green-600 bg-green-50' : 'text-gray-500 bg-gray-100');
+                const qtyText = (r.quantity > 1) ? `<span class="bg-gray-800 text-white text-[10px] font-bold px-1.5 py-0.5 rounded ml-1">${r.quantity} Pz</span>` : '';
+                const palletText = (currentPiece === 'COVER' && r.pallets) ? `<span class="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-1.5 py-0.5 rounded ml-1 border border-emerald-200">${r.pallets} Tarimas</span>` : '';
+                const isSelected = selectedForDeletion.has(r.id);
+                
+                const colorOrSize = r.color && r.color !== 'N/A' ? r.color : (r.size && r.size !== 'N/A' ? r.size : '');
+                const variantSpan = colorOrSize ? `<span class="bg-gray-100 px-1.5 py-0.5 rounded text-gray-600 font-medium">${colorOrSize}</span>` : '';
+                
+                const card = document.createElement('div');
+                card.className = `p-3 rounded-xl shadow-sm border mb-2 flex items-start gap-2 ${isDeleteMode ? (isSelected ? 'bg-red-50 border-red-300 ring-2 ring-red-400' : 'bg-white border-gray-200 cursor-pointer') : 'bg-white border-gray-200 cursor-pointer hover:bg-gray-50 transition'}`;
+                
+                if (isDeleteMode) { card.onclick = () => toggleRecordSelection(r.id); } 
+                else { card.onclick = () => openRecordDetails(r.id); }
+
+                card.innerHTML = `
+                    ${isDeleteMode ? `<div class="flex items-center justify-center mt-2 mr-1"><div class="w-6 h-6 rounded-full border-2 flex items-center justify-center ${isSelected ? 'bg-red-500 border-red-500' : 'border-gray-300 bg-white'}">${isSelected ? '<i class="fas fa-check text-white text-[12px]"></i>' : ''}</div></div>` : ''}
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mt-1 ${iconClass.split(' ').slice(1).join(' ')}"><i class="fas ${iconClass.split(' ')[0]}"></i></div>
+                    <div class="flex-1 overflow-hidden ml-1">
+                        <div class="flex justify-between items-start">
+                            <p class="font-bold text-gray-800 text-sm">${r.type} ${qtyText} ${palletText}</p>
+                            <div class="text-[10px] text-gray-400 font-medium text-right leading-tight">${formatTime(r.timestamp)}<br><span class="text-[9px] text-gray-300">ID: ${r.inspectorId || 'N/A'}</span></div>
+                        </div>
+                        <p class="text-xs text-gray-500 flex flex-wrap gap-1 mt-1">
+                            <span class="font-medium ${sideColor} px-1.5 py-0.5 rounded">${r.side}</span>
+                            ${variantSpan}
+                            <span class="text-red-600 bg-red-50 px-1.5 py-0.5 rounded font-medium truncate max-w-full"><i class="fas fa-exclamation-triangle text-[10px] mr-1"></i>${r.damage}</span>
+                        </p>
+                        ${r.photos && r.photos.length > 0 ? `<div class="flex gap-2 mt-2 hide-scrollbar overflow-x-auto pb-1">${r.photos.map(p => `<img src="${p}" class="w-12 h-12 rounded object-cover border border-gray-200">`).join('')}</div>` : ''}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+        const formatTime = (ts) => new Date(ts).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+
+        window.openRecordDetails = function(id) {
+            if (isDeleteMode) return;
+            const r = allRecords.find(x => x.id === id);
+            if (!r) return;
+
+            const photoContainer = document.getElementById('details-photos');
+            if (r.photos && r.photos.length > 0) {
+                photoContainer.innerHTML = r.photos.map(p => `<img src="${p}" class="w-full max-h-[60vh] object-contain snap-center rounded-xl bg-gray-900 border border-gray-700 shadow-xl">`).join('');
+                photoContainer.classList.remove('hidden');
+            } else {
+                photoContainer.innerHTML = '<div class="w-full flex flex-col items-center justify-center text-gray-500 py-10 opacity-50"><i class="fas fa-image text-4xl mb-2"></i><p>Sin fotografías</p></div>';
+                photoContainer.classList.remove('hidden');
+            }
+
+            const qtyStr = (r.quantity > 1) ? `(${r.quantity} Pz)` : '';
+            const palStr = (currentPiece === 'COVER' && r.pallets) ? ` - ${r.pallets} Tarimas` : '';
+            document.getElementById('details-title').textContent = `${r.type} ${qtyStr}${palStr}`;
+            document.getElementById('details-damage').textContent = r.damage;
+            document.getElementById('details-time').textContent = formatTime(r.timestamp);
+
+            let badgesHtml = '';
+            if(r.side && r.side !== 'N/A') badgesHtml += `<span class="bg-gray-100 text-gray-600 px-3 py-1 rounded font-bold text-sm">${r.side}</span>`;
+            if(r.color && r.color !== 'N/A') badgesHtml += `<span class="bg-gray-100 text-gray-600 px-3 py-1 rounded font-bold text-sm">Color: ${r.color}</span>`;
+            if(r.size && r.size !== 'N/A') badgesHtml += `<span class="bg-gray-100 text-gray-600 px-3 py-1 rounded font-bold text-sm">Tam: ${r.size}</span>`;
+            document.getElementById('details-badges').innerHTML = badgesHtml;
+
+            cloneQuantityValue = 1;
+            document.getElementById('clone-quantity').textContent = '1';
+            const btn = document.getElementById('btn-duplicate-record');
+            btn.onclick = () => duplicateRecord(r.id);
+
+            const m = document.getElementById('record-details-modal');
+            m.classList.remove('hidden'); m.classList.add('flex');
+        };
+
+        window.closeRecordDetails = function() {
+            document.getElementById('record-details-modal').classList.add('hidden');
+            document.getElementById('record-details-modal').classList.remove('flex');
+        };
+
+        window.changeCloneQuantity = function(amt) {
+            cloneQuantityValue = Math.max(1, cloneQuantityValue + amt);
+            document.getElementById('clone-quantity').textContent = cloneQuantityValue;
+        };
+
+        window.duplicateRecord = async function(id) {
+            const original = allRecords.find(x => x.id === id);
+            if (!original || !currentUser) return;
+
+            const btn = document.getElementById('btn-duplicate-record');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Registrando...';
+            btn.disabled = true;
+
+            try {
+                const newRecord = { ...original };
+                delete newRecord.id; 
+                newRecord.timestamp = Date.now();
+                newRecord.dateString = getLocalDateString();
+                newRecord.inspectorId = currentUser.uid.substring(0, 4);
+                
+                newRecord.quantity = cloneQuantityValue;
+                if (currentPiece === 'COVER') newRecord.pallets = 0;
+
+                await addDoc(rechazosRef, newRecord);
+                showNotification(`¡${cloneQuantityValue} registro(s) extra añadido(s)!`);
+                closeRecordDetails();
+            } catch(e) {
+                console.error(e);
+                showNotification("Error al crear el nuevo registro.");
+            } finally {
+                btn.innerHTML = '<i class="fas fa-copy text-xl"></i> Registrar más iguales';
+                btn.disabled = false;
+            }
+        };
+
+        document.getElementById('btn-open-wizard').addEventListener('click', () => {
+            document.getElementById('wizard-modal').classList.remove('hidden');
+            document.getElementById('wizard-modal').classList.add('flex');
+            resetWizard();
+        });
+
+        document.getElementById('btn-close-wizard').addEventListener('click', () => {
+            document.getElementById('wizard-modal').classList.add('hidden');
+            document.getElementById('wizard-modal').classList.remove('flex');
+        });
+
+        window.selectOption = function(cat, val, step) {
+            newRecordData[cat] = val;
+            
+            const stepContainer = event.currentTarget.closest('.snap-center');
+            if (stepContainer) {
+                stepContainer.querySelectorAll('.option-btn').forEach(btn => btn.classList.remove('selected'));
+                event.currentTarget.classList.add('selected');
+            }
+
+            if (cat === 'color' || cat === 'size') {
+                document.getElementById('summary-variant-value').textContent = val;
+            } else if (document.getElementById(`summary-${cat}`)) {
+                document.getElementById(`summary-${cat}`).textContent = val;
+            }
+
+            let nextStep = step;
+            if (cat === 'damage') {
+                if (currentPiece === 'COWL' || currentPiece === 'COVER') {
+                    newRecordData['color'] = 'N/A';
+                    newRecordData['size'] = 'N/A';
+                    newRecordData['type'] = 'Pieza';
+                    nextStep = 5; 
+                } else {
+                    nextStep = 3;
+                }
+            } else if (cat === 'color' || cat === 'size') {
+                nextStep = 4;
+            }
+
+            goToStep(nextStep);
+        };
+
+        window.changeQuantity = function(amt) {
+            newRecordData.quantity = Math.max(1, newRecordData.quantity + amt);
+            document.getElementById('record-quantity').textContent = newRecordData.quantity;
+            document.getElementById('summary-quantity').textContent = newRecordData.quantity;
+        };
+        
+        window.changePallets = function(amt) {
+            newRecordData.pallets = Math.max(1, newRecordData.pallets + amt);
+            document.getElementById('record-pallets').textContent = newRecordData.pallets;
+            document.getElementById('summary-pallets').textContent = newRecordData.pallets;
+        };
+
+        window.handlePhotos = async function(e) {
+            if(!e.target.files) return;
+            if (newRecordData.photos.length >= 3) return showNotification("Máximo 3 fotos permitidas.");
+            
+            const file = e.target.files[0];
+            if(file) {
+                const b64 = await resizeImageAndConvert(file);
+                if(b64) newRecordData.photos.push(b64);
+                renderPhotoPreviews();
+            }
+            e.target.value = ''; 
+        };
+
+        function resizeImageAndConvert(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let scale = img.width > 1280 ? 1280 / img.width : 1;
+                        canvas.width = img.width * scale; 
+                        canvas.height = img.height * scale;
+                        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                        resolve(canvas.toDataURL('image/jpeg', 0.85));
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function renderPhotoPreviews() {
+            const c = document.getElementById('photo-preview-container');
+            c.innerHTML = newRecordData.photos.map((p, i) => `<div class="relative w-16 h-16 flex-shrink-0 rounded overflow-hidden border shadow-sm"><img src="${p}" class="w-full h-full object-cover"><button onclick="removePhoto(${i})" class="absolute top-0 right-0 bg-red-500 text-white text-xs w-5 h-5 rounded-bl opacity-90"><i class="fas fa-times"></i></button></div>`).join('');
+            
+            const btnLabel = document.getElementById('btn-foto-label');
+            if(btnLabel) {
+                if(newRecordData.photos.length >= 3) {
+                    btnLabel.classList.add('hidden'); btnLabel.classList.remove('flex');
+                } else {
+                    btnLabel.classList.remove('hidden'); btnLabel.classList.add('flex');
+                }
+            }
+        }
+        window.removePhoto = function(i) { newRecordData.photos.splice(i, 1); renderPhotoPreviews(); }
+
+        window.goToStep = function(n) {
+            let stepLabel = "";
+            let actualStepNumber = n;
+            const isShort = (currentPiece === 'COVER' || currentPiece === 'COWL');
+            const totalSteps = isShort ? 4 : 6;
+            
+            if (isShort) {
+                if (n === 1) { stepLabel = "Lado"; actualStepNumber = 1; }
+                if (n === 2) { stepLabel = "Daño"; actualStepNumber = 2; }
+                if (n === 5) { stepLabel = "Cantidades"; actualStepNumber = 3; }
+                if (n === 6) { stepLabel = "Confirmar"; actualStepNumber = 4; }
+            } else {
+                const t = ["Lado", "Daño", currentPiece === 'POCKET' ? 'Tamaño' : 'Color', "Presentación", "Cantidades", "Confirmar"];
+                stepLabel = t[n-1];
+                actualStepNumber = n;
+            }
+            
+            document.getElementById('wizard-step-text').textContent = `Paso ${actualStepNumber}: ${stepLabel}`;
+            document.getElementById('wizard-progress').style.width = `${(actualStepNumber / totalSteps) * 100}%`;
+            document.getElementById(`step-${n}`).scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        };
+
+        function resetWizard() {
+            newRecordData = { side: null, damage: null, color: null, size: null, type: null, quantity: 1, pallets: 1, photos: [] };
+            
+            if (currentPiece === 'COVER' || currentPiece === 'COWL') {
+                newRecordData.type = 'Pieza';
+                document.getElementById('summary-type').textContent = 'Pieza';
+            }
+
+            document.querySelectorAll('.option-btn.selected').forEach(btn => btn.classList.remove('selected'));
+            ['piece','side','damage','type'].forEach(k => {
+                if (document.getElementById(`summary-${k}`)) {
+                    document.getElementById(`summary-${k}`).textContent = k==='piece' ? currentPiece : (newRecordData[k] || '-');
+                }
+            });
+            document.getElementById('summary-variant-value').textContent = '-';
+            
+            document.getElementById('summary-quantity').textContent = '1';
+            document.getElementById('record-quantity').textContent = '1';
+            document.getElementById('summary-pallets').textContent = '1';
+            document.getElementById('record-pallets').textContent = '1';
+            renderPhotoPreviews();
+            
+            document.getElementById('step-1').scrollIntoView({ behavior: 'auto' });
+            
+            const isShort = (currentPiece === 'COVER' || currentPiece === 'COWL');
+            document.getElementById('wizard-progress').style.width = isShort ? '25%' : '16.66%';
+            document.getElementById('wizard-step-text').textContent = 'Paso 1: Lado';
+        }
+
+        document.getElementById('btn-save-record').addEventListener('click', async () => {
+            if (!newRecordData.side || !newRecordData.damage || !newRecordData.type) {
+                return showNotification("Completa todos los pasos antes de guardar.");
+            }
+            if (currentPiece === 'UPR' && !newRecordData.color) return showNotification("Selecciona el color.");
+            if (currentPiece === 'POCKET' && !newRecordData.size) return showNotification("Selecciona el tamaño.");
+            
+            if (!currentUser) return showNotification("No hay conexión a la base de datos.");
+
+            const btn = document.getElementById('btn-save-record');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...'; btn.disabled = true;
+
+            try {
+                await addDoc(rechazosRef, {
+                    ...newRecordData, pieceType: currentPiece, timestamp: Date.now(), 
+                    dateString: getLocalDateString(), inspectorId: currentUser.uid.substring(0, 4)
+                });
+                document.getElementById('wizard-modal').classList.add('hidden');
+                document.getElementById('wizard-modal').classList.remove('flex');
+            } catch (e) {
+                console.error(e); showNotification("Error al guardar en la nube.");
+            } finally {
+                btn.innerHTML = '<i class="fas fa-save"></i> Guardar'; btn.disabled = false;
+            }
+        });
+
+        // --- BORRADO ---
+        window.toggleDeleteMode = function() {
+            isDeleteMode = !isDeleteMode; selectedForDeletion.clear();
+            document.getElementById('normal-actions').classList.toggle('hidden', isDeleteMode);
+            document.getElementById('delete-actions').classList.toggle('hidden', !isDeleteMode);
+            document.getElementById('delete-actions').classList.toggle('flex', isDeleteMode);
+            updateDeleteButton(); renderBitacora();
+        };
+
+        window.toggleRecordSelection = function(id) {
+            selectedForDeletion.has(id) ? selectedForDeletion.delete(id) : selectedForDeletion.add(id);
+            updateDeleteButton(); renderBitacora();
+        };
+
+        function updateDeleteButton() {
+            const b = document.getElementById('btn-confirm-delete');
+            b.innerHTML = `<i class="fas fa-trash"></i> Borrar (${selectedForDeletion.size})`;
+            if (selectedForDeletion.size > 0) {
+                b.classList.remove('opacity-50', 'pointer-events-none');
+            } else {
+                b.classList.add('opacity-50', 'pointer-events-none');
+            }
+        }
+
+        window.confirmDeletion = async function() {
+            if (selectedForDeletion.size === 0) return;
+            const b = document.getElementById('btn-confirm-delete');
+            b.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Borrando...';
+            b.classList.add('opacity-50', 'pointer-events-none');
+
+            try {
+                for (const id of selectedForDeletion) {
+                    await deleteDoc(doc(db, 'rechazos_delta', id));
+                }
+                showNotification(`¡Se borraron ${selectedForDeletion.size} registros!`);
+                toggleDeleteMode();
+            } catch(e) { 
+                console.error(e); showNotification("Error al intentar borrar.");
+            } finally { updateDeleteButton(); }
+        };
+
+        // --- LOGICA COMÚN DE AGRUPACIÓN (PDF Y HTML) ---
+        function getGroupedData(records, pieceTarget) {
+            let grouped = {};
+            let totals = {};
+            let totalTarimas = 0;
+            
+            records.forEach(r => {
+                let dmg = r.damage;
+                let type = r.type || 'Pieza';
+                let side = (r.side && r.side !== 'N/A') ? r.side : '';
+                let variant = '';
+                if (pieceTarget === 'UPR' && r.color && r.color !== 'N/A') variant = r.color;
+                if (pieceTarget === 'POCKET' && r.size && r.size !== 'N/A') variant = r.size;
+                
+                let qty = r.quantity || 1;
+                
+                if (pieceTarget === 'COVER') totalTarimas += (r.pallets || 0);
+
+                if (!totals[type]) totals[type] = 0;
+                totals[type] += qty;
+
+                let key = `${dmg}|${type}|${side}|${variant}`;
+                if (!grouped[key]) {
+                    grouped[key] = { dmg, type, side, variant, qty: 0 };
+                }
+                grouped[key].qty += qty;
+            });
+
+            return { grouped: Object.values(grouped), totals, totalTarimas };
+        }
+
+
+        // --- REPORTE DIARIO MODAL (HTML) ---
+        window.openReportModal = function() {
+            const m = document.getElementById('report-modal');
+            document.getElementById('report-date-picker').value = getLocalDateString();
+            m.classList.remove('hidden'); m.classList.add('flex');
+            generateReportContent();
+        };
+
+        window.closeReportModal = function() {
+            document.getElementById('report-modal').classList.add('hidden');
+            document.getElementById('report-modal').classList.remove('flex');
+        };
+
+        window.generateReportContent = function() {
+            const date = document.getElementById('report-date-picker').value;
+            const container = document.getElementById('report-content');
+            container.innerHTML = getHTMLReportForPiece(currentPiece, date);
+        };
+
+        function getHTMLReportForPiece(pieceTarget, dateStr) {
+            const records = allRecords.filter(r => (r.pieceType || 'UPR') === pieceTarget && r.dateString === dateStr);
+            if (records.length === 0) return `<div class="text-center py-6"><p class="text-gray-400 font-medium">No se registraron defectos.</p></div>`;
+
+            const { grouped, totals, totalTarimas } = getGroupedData(records, pieceTarget);
+            const headerColor = pieceTarget === 'UPR' ? 'from-blue-600 to-blue-700' : (pieceTarget === 'COWL' ? 'from-indigo-600 to-indigo-700' : (pieceTarget === 'POCKET' ? 'from-teal-600 to-teal-700' : 'from-emerald-600 to-emerald-700'));
+            
+            let summaryText = Object.keys(totals).map(k => `<span class="font-bold text-white bg-black bg-opacity-20 px-2 py-0.5 rounded text-sm">${totals[k]} ${k}</span>`).join(' ');
+            
+            let html = `<div class="mb-4 bg-gradient-to-r ${headerColor} text-white p-4 rounded-xl shadow flex flex-col gap-2"><span class="font-medium text-sm text-white text-opacity-90 uppercase tracking-wide">Total de Registros:</span><div class="flex flex-wrap gap-2">${summaryText}</div></div>`;
+            
+            if(pieceTarget === 'COVER' && totalTarimas > 0) {
+                html += `<div class="mb-4 bg-emerald-50 border border-emerald-100 p-4 rounded-xl flex justify-between items-center"><span class="font-bold text-emerald-800">Tarimas Revisadas:</span><span class="text-xl font-black text-emerald-600">${totalTarimas}</span></div>`;
+            }
+
+            // Agrupar visualmente por Daño para la pantalla
+            let dmgGroups = {};
+            grouped.sort((a,b) => b.qty - a.qty).forEach(item => {
+                if(!dmgGroups[item.dmg]) dmgGroups[item.dmg] = [];
+                dmgGroups[item.dmg].push(item);
+            });
+
+            Object.keys(dmgGroups).forEach(dmg => {
+                let itemsHtml = dmgGroups[dmg].map(item => {
+                    let detalles = [];
+                    if(item.side) detalles.push(item.side);
+                    if(item.variant) detalles.push(item.variant);
+                    let detStr = detalles.length > 0 ? `(${detalles.join(', ')})` : '';
+                    return `<div class="flex justify-between items-center py-2 border-b border-gray-50 last:border-0"><div class="flex flex-col"><span class="font-bold text-gray-700 text-sm">${item.type}</span><span class="text-xs text-gray-500">${detStr}</span></div><span class="font-bold text-gray-800 bg-gray-100 px-3 py-1 rounded-full text-sm">${item.qty}</span></div>`;
+                }).join('');
+
+                html += `<div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-3"><h4 class="font-bold text-red-500 text-lg mb-2 pb-2 border-b border-gray-100">${dmg}</h4>${itemsHtml}</div>`;
+            });
+            return html;
+        }
+
+        // --- EXPORTACIÓN A PDF PROFESIONAL ---
+        window.openExportModal = function() {
+            const m = document.getElementById('export-date-modal');
+            document.getElementById('export-date-picker').value = getLocalDateString();
+            m.classList.remove('hidden'); m.classList.add('flex');
+        };
+
+        window.closeExportModal = function() {
+            document.getElementById('export-date-modal').classList.add('hidden');
+            document.getElementById('export-date-modal').classList.remove('flex');
+        };
+
+        window.downloadPDF = function() {
+            if (allRecords.length === 0) {
+                closeExportModal();
+                return showNotification("No hay registros en la nube.");
+            }
+
+            const dateStr = document.getElementById('export-date-picker').value;
+            const dateStrFormatted = new Date(dateStr + 'T12:00:00').toLocaleDateString('es-MX', { weekday:'long', year:'numeric', month:'long', day:'numeric' }).toUpperCase();
+            
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(18);
+            doc.text("REPORTE DE CALIDAD - DELTA TECH", 14, 20);
+            
+            doc.setFontSize(11);
+            doc.setFont("helvetica", "normal");
+            doc.text(`Fecha: ${dateStrFormatted}`, 14, 28);
+            
+            let currentY = 36;
+            const piecesList = ['UPR', 'COWL', 'POCKET', 'COVER'];
+            let hasData = false;
+
+            piecesList.forEach(piece => {
+                const records = allRecords.filter(r => (r.pieceType || 'UPR') === piece && r.dateString === dateStr);
+                if (records.length === 0) return;
+                
+                hasData = true;
+                const { grouped, totals, totalTarimas } = getGroupedData(records, piece);
+                
+                if (currentY > 250) { doc.addPage(); currentY = 20; }
+
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(14);
+                doc.setTextColor(41, 128, 185);
+                doc.text(`Línea: ${piece}`, 14, currentY);
+                currentY += 6;
+
+                doc.setFontSize(10);
+                doc.setTextColor(0, 0, 0);
+                
+                let summaryText = Object.keys(totals).map(k => `${totals[k]} ${k}`).join(', ');
+                
+                if (piece === 'COVER' && totalTarimas > 0) {
+                    doc.setFont("helvetica", "bold");
+                    doc.text(`Total Tarimas Revisadas: ${totalTarimas}`, 14, currentY);
+                    currentY += 5;
+                }
+                
+                doc.setFont("helvetica", "bold");
+                doc.text(`Total Registrado: ${summaryText}`, 14, currentY);
+                currentY += 6;
+
+                const tableBody = grouped.sort((a,b) => a.dmg.localeCompare(b.dmg)).map(item => {
+                    let detalles = [];
+                    if (item.side) detalles.push(`Lado: ${item.side}`);
+                    if (item.variant) detalles.push(piece === 'POCKET' ? `Tamaño: ${item.variant}` : `Color: ${item.variant}`);
+                    let detStr = detalles.length > 0 ? detalles.join('\n') : '-';
+                    
+                    return [item.dmg, item.type, detStr, item.qty.toString()];
+                });
+                
+                doc.autoTable({
+                    startY: currentY,
+                    head: [['Defecto', 'Presentación', 'Detalles', 'Cantidad']],
+                    body: tableBody,
+                    theme: 'grid',
+                    headStyles: { fillColor: [44, 62, 80] },
+                    styles: { fontSize: 9, cellPadding: 3, valign: 'middle' },
+                    margin: { left: 14, right: 14 }
+                });
+                
+                currentY = doc.lastAutoTable.finalY + 15;
+            });
+
+            if (!hasData) {
+                doc.setFont("helvetica", "italic");
+                doc.text("No se registraron defectos en esta fecha.", 14, currentY);
+            }
+            
+            doc.save(`Reporte_Delta_${dateStr}.pdf`);
+            closeExportModal();
+            showNotification("¡PDF descargado con éxito!");
+        };
+
+        function showNotification(msg) {
+            const alert = document.getElementById('top-alert');
+            document.getElementById('top-alert-msg').textContent = msg;
+            alert.style.transform = 'translateY(0)';
+            setTimeout(() => alert.style.transform = 'translateY(-100%)', 3000);
+        }
+
+        initApp();
+    </script>
+</body>
+</html>
