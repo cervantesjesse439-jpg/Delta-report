@@ -334,6 +334,12 @@
                         <h4 class="text-2xl font-black mb-6 text-gray-900 text-center flex-shrink-0 drop-shadow-sm">Tipo de Daño</h4>
                         <div class="grid grid-cols-2 gap-3 w-full pb-8">
                             
+                            <!-- Opción Especial: Tarimas OK (Solo COVER) -->
+                            <button class="option-btn dmg-btn cover-dmg glass-btn p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 border border-white col-span-2 bg-green-50/50" onclick="selectOption('damage', 'Tarimas OK', 3)">
+                                <div class="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center shadow-inner border border-green-200"><i class="fas fa-check-double text-2xl text-green-500"></i></div>
+                                <span class="font-bold text-gray-900 text-sm text-center">Tarimas OK (Sin piezas malas)</span>
+                            </button>
+
                             <!-- Daños base -->
                             <button class="option-btn dmg-btn upr-dmg cowl-dmg pocket-dmg glass-btn p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 border border-white" onclick="selectOption('damage', 'Ráfaga', 3)">
                                 <div class="w-12 h-12 bg-white/80 rounded-full flex items-center justify-center shadow-inner border border-gray-100"><i class="fas fa-wind text-2xl text-blue-500"></i></div>
@@ -532,7 +538,7 @@
                         </div>
 
                         <!-- Cantidad -->
-                        <div class="w-full glass-btn p-6 rounded-3xl shadow-sm mb-5 border border-white">
+                        <div id="quantity-container-wrapper" class="w-full glass-btn p-6 rounded-3xl shadow-sm mb-5 border border-white">
                             <span id="lbl-cantidad-rechazos" class="block text-sm font-black text-gray-700 mb-4 text-center uppercase tracking-widest">Cantidad</span>
                             <div class="flex items-center justify-center gap-8">
                                 <button onclick="changeQuantity(-1)" class="w-14 h-14 rounded-full bg-white/80 border border-gray-300 flex items-center justify-center text-2xl font-bold text-gray-600 hover:bg-white transition shadow-sm active:scale-95"><i class="fas fa-minus"></i></button>
@@ -586,7 +592,7 @@
                                 <span class="text-gray-600 font-bold">Tarimas</span>
                                 <span class="font-black text-2xl text-emerald-700" id="summary-pallets">1</span>
                             </div>
-                            <div class="flex justify-between items-center py-3 border-b border-transparent mt-2">
+                            <div id="summary-qty-row" class="flex justify-between items-center py-3 border-b border-transparent mt-2">
                                 <span class="text-gray-800 font-black uppercase tracking-wider" id="summary-lbl-cantidad">Cantidad Total</span>
                                 <span class="font-black text-3xl text-blue-700 drop-shadow-sm" id="summary-quantity">1</span>
                             </div>
@@ -608,7 +614,7 @@
         </div>
         
         <div id="details-photos" class="flex-1 overflow-x-auto snap-x-mandatory flex hide-scrollbar items-center gap-4 px-4 pb-4">
-            <!-- Las imágenes se inyectan aquí -->
+            <!-- Las imágenes originales se inyectan aquí -->
         </div>
         
         <div class="bg-white/90 backdrop-blur-2xl rounded-t-[2.5rem] p-7 slide-up shadow-[0_-10px_40px_rgba(0,0,0,0.3)] border-t border-white/50">
@@ -617,10 +623,25 @@
                 <span id="details-time" class="text-sm font-bold text-gray-500 bg-black/5 px-2 py-1 rounded-md"></span>
             </div>
             <p id="details-damage" class="text-red-600 font-black text-xl mb-3 drop-shadow-sm">-</p>
-            <div id="details-badges" class="flex flex-wrap gap-2 mb-6">
+            <div id="details-badges" class="flex flex-wrap gap-2 mb-4">
                 <!-- Badges de lado/variante se inyectan aquí -->
             </div>
             
+            <!-- SECCIÓN CLONAR FOTOS -->
+            <div class="bg-black/5 p-4 rounded-2xl border border-black/10 shadow-inner mb-4">
+                <span class="text-sm font-bold text-gray-700 uppercase tracking-wide block mb-2">Fotos para el clon (Opcional):</span>
+                <div class="flex items-center gap-3">
+                    <div id="clone-photo-preview" class="flex gap-2 overflow-x-auto hide-scrollbar flex-1">
+                        <!-- Las fotos clonables con tachecito van aquí -->
+                    </div>
+                    <label class="w-10 h-10 flex-shrink-0 bg-white border border-gray-300 rounded-xl flex items-center justify-center text-gray-600 cursor-pointer hover:bg-gray-50 shadow-sm transition">
+                        <i class="fas fa-camera"></i>
+                        <input type="file" accept="image/*" class="hidden" onchange="handleClonePhotos(event)">
+                    </label>
+                </div>
+            </div>
+
+            <!-- SECCIÓN CLONAR CANTIDAD -->
             <div class="flex items-center justify-between mb-5 bg-black/5 p-4 rounded-2xl border border-black/10 shadow-inner">
                 <span class="text-sm font-bold text-gray-700 uppercase tracking-wide">Clonar cantidad:</span>
                 <div class="flex items-center gap-5">
@@ -710,6 +731,7 @@
         let selectedForDeletion = new Set();
         let currentPiece = null; 
         let cloneQuantityValue = 1;
+        let clonePhotos = []; // Para almacenar las fotos temporales a clonar
         
         let inspectorName = '';
         let unsubscribeInspector = null;
@@ -728,7 +750,6 @@
         const getFilteredRecords = () => {
             return allRecords.filter(r => (r.pieceType || 'UPR') === currentPiece).map(r => {
                 let correctedRecord = { ...r };
-                // Convierte automáticamente cualquier registro viejo de COWL que diga "Sin etiqueta" a "Contaminación"
                 if (correctedRecord.pieceType === 'COWL' && correctedRecord.damage === 'Sin etiqueta') {
                     correctedRecord.damage = 'Contaminación';
                 }
@@ -738,7 +759,6 @@
 
         // --- SISTEMA DE IDENTIDAD DINÁMICA POR PIEZA ---
         window.openInspectorModal = function() {
-            // Autocompletar con el último nombre usado en este celular (comodidad)
             document.getElementById('inspector-name-input').value = localStorage.getItem('delta_last_name') || '';
             document.getElementById('inspector-modal-desc').textContent = `Ingresa tu nombre para ser el inspector oficial de ${currentPiece} hoy.`;
             document.getElementById('inspector-name-modal').classList.remove('hidden');
@@ -782,7 +802,7 @@
                 } else {
                     inspectorName = '';
                     document.getElementById('current-inspector-display').textContent = 'Nadie asignado';
-                    openInspectorModal(); // Nadie registrado hoy, pedir nombre
+                    openInspectorModal(); 
                 }
             });
         }
@@ -831,6 +851,7 @@
 
             const header = document.getElementById('main-header');
             const wizardProgress = document.getElementById('wizard-progress');
+            const btnMain = document.getElementById('btn-open-wizard');
             
             document.getElementById('header-piece-name').textContent = piece;
             document.getElementById('wizard-piece-badge').textContent = piece;
@@ -868,6 +889,7 @@
                 document.getElementById('step-3-title').textContent = 'Color';
                 document.getElementById('summary-variant-label').textContent = 'Color';
                 document.getElementById('summary-variant-row').classList.remove('hidden');
+                btnMain.innerHTML = '<i class="fas fa-plus-circle text-2xl drop-shadow-sm"></i> Registrar Rechazo';
 
             } else if (piece === 'COWL') {
                 header.classList.add('bg-indigo-700'); wizardProgress.className = 'h-full transition-all duration-300 shadow-[0_0_10px_rgba(99,102,241,0.8)] bg-indigo-500';
@@ -875,6 +897,7 @@
                 document.getElementById('step-4').classList.remove('flex'); document.getElementById('step-4').classList.add('hidden');
                 document.getElementById('summary-type-row').classList.add('hidden');
                 document.getElementById('stat-card-piezas').classList.add('col-span-2');
+                btnMain.innerHTML = '<i class="fas fa-plus-circle text-2xl drop-shadow-sm"></i> Registrar Rechazo';
 
             } else if (piece === 'POCKET') {
                 header.classList.add('bg-teal-700'); wizardProgress.className = 'h-full transition-all duration-300 shadow-[0_0_10px_rgba(20,184,166,0.8)] bg-teal-500';
@@ -886,6 +909,7 @@
                 document.getElementById('step-3-title').textContent = 'Tamaño';
                 document.getElementById('summary-variant-label').textContent = 'Tamaño';
                 document.getElementById('summary-variant-row').classList.remove('hidden');
+                btnMain.innerHTML = '<i class="fas fa-plus-circle text-2xl drop-shadow-sm"></i> Registrar Rechazo';
 
             } else if (piece === 'COVER') {
                 header.classList.add('bg-emerald-700'); wizardProgress.className = 'h-full transition-all duration-300 shadow-[0_0_10px_rgba(16,185,129,0.8)] bg-emerald-500';
@@ -899,11 +923,12 @@
                 document.getElementById('lbl-cantidad-rechazos').textContent = "Piezas Rechazadas";
                 document.getElementById('summary-lbl-cantidad').textContent = "Total Rechazos";
                 document.querySelectorAll('.na-option').forEach(el => el.classList.add('hidden'));
+                btnMain.innerHTML = '<i class="fas fa-pallet text-2xl drop-shadow-sm"></i> Registrar Tarimas';
             }
 
             updateDashboard();
             renderBitacora();
-            checkDailyInspector(); // Verificar nube al entrar
+            checkDailyInspector(); 
         };
 
         window.goBackToLobby = function() {
@@ -921,7 +946,7 @@
             let stats = { piezasTotal: 0, rh: 0, lh: 0, carrosTotal: 0, carrosVenta: 0, carrosInyeccion: 0, cajasTotal: 0, cajaNormal: 0, cajaGrande: 0, tarimas: 0 };
 
             records.forEach(r => {
-                let qty = r.quantity || 1;
+                let qty = r.quantity !== undefined ? r.quantity : 1;
                 let pallets = r.pallets || 0;
                 
                 if (currentPiece === 'COVER') {
@@ -971,9 +996,12 @@
                     container.appendChild(header);
                 }
 
-                let iconClass = 'fa-puzzle-piece text-red-500 bg-red-100';
-                if (r.type && r.type.includes('Carro')) iconClass = 'fa-truck text-purple-600 bg-purple-100';
-                if (r.type && r.type.includes('Caja')) iconClass = 'fa-box-open text-teal-600 bg-teal-100';
+                const isTarimasOK = r.damage === 'Tarimas OK';
+
+                let iconClass = 'fa-puzzle-piece text-red-500 bg-red-100 border-red-200';
+                if (r.type && r.type.includes('Carro')) iconClass = 'fa-truck text-purple-600 bg-purple-100 border-purple-200';
+                if (r.type && r.type.includes('Caja')) iconClass = 'fa-box-open text-teal-600 bg-teal-100 border-teal-200';
+                if (isTarimasOK) iconClass = 'fa-pallet text-green-600 bg-green-100 border-green-200';
                 
                 const sideColor = r.side === 'RH' ? 'text-blue-700 bg-blue-100/80 border-blue-200' : (r.side === 'LH' ? 'text-green-700 bg-green-100/80 border-green-200' : 'text-gray-700 bg-gray-100/80 border-gray-200');
                 const qtyText = (r.quantity > 1) ? `<span class="bg-gray-900 text-white text-[10px] font-bold px-2 py-0.5 rounded-md ml-1 shadow-sm">${r.quantity} ${r.type}</span>` : '';
@@ -983,6 +1011,9 @@
                 const variantSpan = (r.variant && r.variant !== 'N/A') ? `<span class="bg-black/5 border border-white px-2 py-0.5 rounded-md text-gray-800 font-bold">${r.variant}</span>` : '';
                 
                 const inspectorStr = r.inspectorName ? `<span class="text-[9px] text-gray-500 block font-bold"><i class="fas fa-user mr-0.5"></i> ${r.inspectorName.substring(0, 15)}</span>` : `<span class="text-[9px] text-gray-400 block font-bold">Sin asignar</span>`;
+
+                let damageIcon = isTarimasOK ? 'fa-check-double' : 'fa-exclamation-triangle';
+                let damageStyle = isTarimasOK ? 'text-green-700 bg-green-100/90 border-green-200' : 'text-red-700 bg-red-100/90 border-red-200';
 
                 const card = document.createElement('div');
                 card.className = `p-3.5 rounded-2xl shadow-sm mb-3 flex items-start gap-3 glass-btn border border-white ${isDeleteMode ? (isSelected ? 'bg-red-50/90 border-red-400 ring-2 ring-red-400' : 'cursor-pointer') : 'cursor-pointer'}`;
@@ -999,9 +1030,9 @@
                             <div class="text-[10px] text-gray-600 font-bold text-right leading-tight">${formatTime(r.timestamp)}${inspectorStr}</div>
                         </div>
                         <p class="text-xs flex flex-wrap gap-1.5 mt-2">
-                            <span class="font-bold border backdrop-blur-sm ${sideColor} px-2 py-0.5 rounded-md">${r.side}</span>
+                            ${!isTarimasOK ? `<span class="font-bold border backdrop-blur-sm ${sideColor} px-2 py-0.5 rounded-md">${r.side}</span>` : ''}
                             ${variantSpan}
-                            <span class="text-red-700 bg-red-100/90 border border-red-200 px-2 py-0.5 rounded-md font-bold truncate max-w-full shadow-sm"><i class="fas fa-exclamation-triangle text-[10px] mr-1"></i>${r.damage}</span>
+                            <span class="${damageStyle} px-2 py-0.5 rounded-md font-bold truncate max-w-full shadow-sm"><i class="fas ${damageIcon} text-[10px] mr-1"></i>${r.damage}</span>
                         </p>
                         ${r.photos && r.photos.length > 0 ? `<div class="flex gap-2 mt-3 hide-scrollbar overflow-x-auto pb-1">${r.photos.map(p => `<img src="${p}" class="w-12 h-12 rounded-lg object-cover border border-white shadow-sm">`).join('')}</div>` : ''}
                     </div>
@@ -1013,7 +1044,7 @@
 
         window.openRecordDetails = function(id) {
             if (isDeleteMode) return;
-            const r = getFilteredRecords().find(x => x.id === id); // Ya procesado con migración si es COWL
+            const r = getFilteredRecords().find(x => x.id === id); 
             if (!r) return;
 
             const photoContainer = document.getElementById('details-photos');
@@ -1025,16 +1056,23 @@
                 photoContainer.classList.remove('hidden');
             }
 
+            // Preparar las fotos para el clon
+            clonePhotos = r.photos ? [...r.photos] : [];
+            renderClonePhotos();
+
             const qtyStr = (r.quantity > 1) ? `(${r.quantity} ${r.type})` : '';
             const palStr = (currentPiece === 'COVER' && r.pallets) ? ` - ${r.pallets} Tarimas` : '';
             document.getElementById('details-title').textContent = `${r.type} ${qtyStr}${palStr}`;
             
-            // Ya aplicamos la migración antes, así que r.damage ya es correcto ("Contaminación" si aplicaba)
-            document.getElementById('details-damage').textContent = r.damage;
+            const isTarimasOK = r.damage === 'Tarimas OK';
+            const damageEl = document.getElementById('details-damage');
+            damageEl.textContent = r.damage;
+            damageEl.className = isTarimasOK ? 'text-green-600 font-black text-xl mb-3 drop-shadow-sm' : 'text-red-600 font-black text-xl mb-3 drop-shadow-sm';
+            
             document.getElementById('details-time').textContent = formatTime(r.timestamp);
 
             let badgesHtml = '';
-            if(r.side && r.side !== 'N/A') badgesHtml += `<span class="bg-black/10 text-gray-800 border border-white/50 px-3 py-1 rounded-md font-bold text-sm shadow-sm">${r.side}</span>`;
+            if(r.side && r.side !== 'N/A' && !isTarimasOK) badgesHtml += `<span class="bg-black/10 text-gray-800 border border-white/50 px-3 py-1 rounded-md font-bold text-sm shadow-sm">${r.side}</span>`;
             if(r.variant && r.variant !== 'N/A') badgesHtml += `<span class="bg-black/10 text-gray-800 border border-white/50 px-3 py-1 rounded-md font-bold text-sm shadow-sm">Var: ${r.variant}</span>`;
             document.getElementById('details-badges').innerHTML = badgesHtml;
 
@@ -1045,6 +1083,37 @@
 
             const m = document.getElementById('record-details-modal');
             m.classList.remove('hidden'); m.classList.add('flex');
+        };
+
+        function renderClonePhotos() {
+            const container = document.getElementById('clone-photo-preview');
+            if(clonePhotos.length === 0) {
+                container.innerHTML = '<span class="text-xs text-gray-400 italic">Sin fotos.</span>';
+            } else {
+                container.innerHTML = clonePhotos.map((p, i) => `
+                    <div class="relative w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden border border-gray-200 shadow-sm bg-black">
+                        <img src="${p}" class="w-full h-full object-cover">
+                        <button onclick="removeClonePhoto(${i})" class="absolute top-0 right-0 bg-red-500 text-white text-[10px] w-5 h-5 rounded-bl shadow flex items-center justify-center active:scale-95"><i class="fas fa-times"></i></button>
+                    </div>
+                `).join('');
+            }
+        }
+
+        window.removeClonePhoto = function(i) {
+            clonePhotos.splice(i, 1);
+            renderClonePhotos();
+        };
+
+        window.handleClonePhotos = async function(e) {
+            if(!e.target.files) return;
+            if (clonePhotos.length >= 3) return showNotification("Máximo 3 fotos permitidas.");
+            const file = e.target.files[0];
+            if(file) {
+                const b64 = await resizeImageAndConvert(file);
+                if(b64) clonePhotos.push(b64);
+                renderClonePhotos();
+            }
+            e.target.value = ''; 
         };
 
         window.closeRecordDetails = function() {
@@ -1075,7 +1144,11 @@
                 newRecord.inspectorName = inspectorName;
                 
                 newRecord.quantity = cloneQuantityValue;
-                if (currentPiece === 'COVER') newRecord.pallets = 0;
+                if (currentPiece === 'COVER' && newRecord.damage !== 'Tarimas OK') {
+                    newRecord.pallets = 0; // Si clonan rechazos, no clonar las tarimas revisadas
+                }
+                
+                newRecord.photos = clonePhotos; // Inyecta las fotos modificadas (solo para el clon)
 
                 await addDoc(rechazosRef, newRecord);
                 showNotification(`¡${cloneQuantityValue} registro(s) extra añadido(s)!`);
@@ -1121,6 +1194,21 @@
 
             let nextStep = step;
             if (cat === 'damage') {
+                // LÓGICA TARIMAS OK
+                if (val === 'Tarimas OK') {
+                    document.getElementById('quantity-container-wrapper').classList.add('hidden');
+                    document.getElementById('summary-qty-row').classList.add('hidden');
+                    newRecordData.quantity = 0;
+                } else {
+                    document.getElementById('quantity-container-wrapper').classList.remove('hidden');
+                    document.getElementById('summary-qty-row').classList.remove('hidden');
+                    if (newRecordData.quantity === 0) {
+                        newRecordData.quantity = 1;
+                        document.getElementById('record-quantity').textContent = '1';
+                        document.getElementById('summary-quantity').textContent = '1';
+                    }
+                }
+
                 if (currentPiece === 'COWL' || currentPiece === 'COVER') {
                     newRecordData['variant'] = 'N/A';
                     newRecordData['type'] = 'Pieza';
@@ -1181,7 +1269,7 @@
 
         function renderPhotoPreviews() {
             const c = document.getElementById('photo-preview-container');
-            c.innerHTML = newRecordData.photos.map((p, i) => `<div class="relative w-16 h-16 flex-shrink-0 rounded-xl overflow-hidden border-2 border-white shadow-sm"><img src="${p}" class="w-full h-full object-cover"><button onclick="removePhoto(${i})" class="absolute top-0 right-0 bg-red-500 text-white text-xs w-6 h-6 rounded-bl-lg shadow"><i class="fas fa-times"></i></button></div>`).join('');
+            c.innerHTML = newRecordData.photos.map((p, i) => `<div class="relative w-16 h-16 flex-shrink-0 rounded-xl overflow-hidden border-2 border-white shadow-sm"><img src="${p}" class="w-full h-full object-cover"><button onclick="removePhoto(${i})" class="absolute top-0 right-0 bg-red-500 text-white text-xs w-6 h-6 rounded-bl-lg shadow flex items-center justify-center"><i class="fas fa-times"></i></button></div>`).join('');
             
             const btnLabel = document.getElementById('btn-foto-label');
             if(btnLabel) {
@@ -1236,6 +1324,10 @@
             document.getElementById('record-quantity').textContent = '1';
             document.getElementById('summary-pallets').textContent = '1';
             document.getElementById('record-pallets').textContent = '1';
+            
+            document.getElementById('quantity-container-wrapper').classList.remove('hidden');
+            document.getElementById('summary-qty-row').classList.remove('hidden');
+
             renderPhotoPreviews();
             
             document.getElementById('step-1').scrollIntoView({ behavior: 'auto' });
@@ -1321,23 +1413,24 @@
             
             records.forEach(r => {
                 let dmg = r.damage;
-                // La migración de Sin Etiqueta en COWL a Contaminación ya fue procesada en getFilteredRecords
-                
                 let type = r.type || 'Pieza';
                 let side = (r.side && r.side !== 'N/A') ? r.side : '';
                 let variant = (r.variant && r.variant !== 'N/A') ? r.variant : '';
-                let qty = r.quantity || 1;
+                let qty = r.quantity !== undefined ? r.quantity : 1;
                 
                 if (pieceTarget === 'COVER') totalTarimas += (r.pallets || 0);
 
-                if (!totals[type]) totals[type] = 0;
-                totals[type] += qty;
+                // Excluir "Tarimas OK" del conteo de defectos visuales y tablas.
+                if (dmg !== 'Tarimas OK') {
+                    if (!totals[type]) totals[type] = 0;
+                    totals[type] += qty;
 
-                let key = `${dmg}|${type}|${side}|${variant}`;
-                if (!grouped[key]) {
-                    grouped[key] = { dmg, type, side, variant, qty: 0 };
+                    let key = `${dmg}|${type}|${side}|${variant}`;
+                    if (!grouped[key]) {
+                        grouped[key] = { dmg, type, side, variant, qty: 0 };
+                    }
+                    grouped[key].qty += qty;
                 }
-                grouped[key].qty += qty;
             });
 
             return { grouped: Object.values(grouped), totals, totalTarimas };
@@ -1363,9 +1456,8 @@
         };
 
         function getHTMLReportForPiece(pieceTarget, dateStr) {
-            // Aplicamos filter sobre getFilteredRecords para mantener la regla de migración de COWL en el reporte
             const records = getFilteredRecords().filter(r => r.dateString === dateStr);
-            if (records.length === 0) return `<div class="text-center py-10 glass-btn rounded-3xl"><p class="text-gray-600 font-bold text-lg">No se registraron defectos.</p></div>`;
+            if (records.length === 0) return `<div class="text-center py-10 glass-btn rounded-3xl"><p class="text-gray-600 font-bold text-lg">No se registraron defectos ni tarimas.</p></div>`;
 
             const { grouped, totals, totalTarimas } = getGroupedData(records, pieceTarget);
             
@@ -1374,7 +1466,7 @@
             if(pieceTarget === 'POCKET') headerColorClass = 'bg-teal-600';
             if(pieceTarget === 'COVER') headerColorClass = 'bg-emerald-600';
 
-            let summaryText = Object.keys(totals).map(k => `<span class="font-bold text-white bg-black/20 backdrop-blur-sm border border-white/20 px-3 py-1 rounded-lg text-sm shadow-sm">${totals[k]} ${k}</span>`).join(' ');
+            let summaryText = Object.keys(totals).length > 0 ? Object.keys(totals).map(k => `<span class="font-bold text-white bg-black/20 backdrop-blur-sm border border-white/20 px-3 py-1 rounded-lg text-sm shadow-sm">${totals[k]} ${k}</span>`).join(' ') : '<span class="font-bold text-white bg-black/20 backdrop-blur-sm border border-white/20 px-3 py-1 rounded-lg text-sm shadow-sm">0 Rechazos</span>';
             
             let html = `<div class="mb-5 ${headerColorClass} text-white p-5 rounded-[2rem] shadow-lg flex flex-col gap-3 border border-white/20 relative overflow-hidden">
                 <div class="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>
@@ -1442,7 +1534,6 @@
             let hasData = false;
 
             piecesList.forEach(piece => {
-                // Al exportar PDF, aplicamos manualmente la regla de migración de COWL a todos los registros
                 const rawRecords = allRecords.filter(r => (r.pieceType || 'UPR') === piece && r.dateString === dateStr);
                 const records = rawRecords.map(r => {
                     let correctedRecord = { ...r };
@@ -1468,7 +1559,7 @@
                 doc.setFontSize(10);
                 doc.setTextColor(0, 0, 0);
                 
-                let summaryText = Object.keys(totals).map(k => `${totals[k]} ${k}`).join(', ');
+                let summaryText = Object.keys(totals).length > 0 ? Object.keys(totals).map(k => `${totals[k]} ${k}`).join(', ') : '0 Rechazos';
                 
                 if (piece === 'COVER' && totalTarimas > 0) {
                     doc.setFont("helvetica", "bold");
@@ -1489,22 +1580,25 @@
                     return [item.dmg, item.type, detStr, item.qty.toString()];
                 });
                 
-                doc.autoTable({
-                    startY: currentY,
-                    head: [['Defecto', 'Presentación', 'Detalles', 'Cantidad']],
-                    body: tableBody,
-                    theme: 'grid',
-                    headStyles: { fillColor: [44, 62, 80] },
-                    styles: { fontSize: 9, cellPadding: 3, valign: 'middle' },
-                    margin: { left: 14, right: 14 }
-                });
-                
-                currentY = doc.lastAutoTable.finalY + 15;
+                if (tableBody.length > 0) {
+                    doc.autoTable({
+                        startY: currentY,
+                        head: [['Defecto', 'Presentación', 'Detalles', 'Cantidad']],
+                        body: tableBody,
+                        theme: 'grid',
+                        headStyles: { fillColor: [44, 62, 80] },
+                        styles: { fontSize: 9, cellPadding: 3, valign: 'middle' },
+                        margin: { left: 14, right: 14 }
+                    });
+                    currentY = doc.lastAutoTable.finalY + 15;
+                } else {
+                    currentY += 10;
+                }
             });
 
             if (!hasData) {
                 doc.setFont("helvetica", "italic");
-                doc.text("No se registraron defectos en esta fecha.", 14, currentY);
+                doc.text("No se registraron defectos ni tarimas en esta fecha.", 14, currentY);
             }
             
             doc.save(`Reporte_Delta_${dateStr}.pdf`);
