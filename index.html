@@ -14,21 +14,12 @@
         body {
             font-family: 'Inter', sans-serif;
             -webkit-tap-highlight-color: transparent;
-            /* Fondo cálido pastel premium basado en la referencia */
             background-image: url('https://images.unsplash.com/photo-1490730141103-6cac27aaab94?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
         }
         
-        /* Capa superpuesta para asegurar legibilidad con estilo Glassmorphism */
-        .bg-overlay {
-            background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.1) 100%);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-        }
-
-        /* Utilidad Glassmorphism (Efecto cristal) */
         .glass-panel {
             background: rgba(255, 255, 255, 0.7);
             backdrop-filter: blur(16px);
@@ -68,8 +59,170 @@
 </head>
 <body class="text-gray-800 antialiased h-screen flex flex-col overflow-hidden relative">
     
-    <!-- Capa base para suavizar el fondo y dar efecto frosted -->
     <div class="absolute inset-0 bg-white/30 backdrop-blur-md z-0"></div>
+
+    <!-- Onboarding Administrador (Solo 1 vez) -->
+    <div id="admin-onboarding-modal" class="fixed inset-0 bg-black/60 backdrop-blur-md z-[150] hidden flex-col items-center justify-center p-6 fade-in">
+        <div class="glass-panel w-full max-w-sm rounded-3xl p-8 flex flex-col items-center text-center relative bg-white/90">
+            <div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 text-3xl mb-4 shadow-sm border border-indigo-200">
+                <i class="fas fa-user-shield"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-gray-800 mb-2">Bienvenido a Delta Tech</h3>
+            <p class="text-gray-600 text-sm mb-6">Hemos detectado que es tu primera vez aquí. ¿Deseas registrarte como Administrador del sistema?</p>
+            <div class="flex w-full gap-3">
+                <button onclick="skipAdminOnboarding()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 rounded-xl transition active:scale-95 shadow-sm">
+                    No, soy Inspector
+                </button>
+                <button onclick="startAdminRegistration()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition active:scale-95 shadow-lg">
+                    Sí, Registrarme
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Gestión y Registro de Administradores (Espacios Dinámicos) -->
+    <div id="pin-modal" class="fixed inset-0 bg-black/60 backdrop-blur-md z-[160] hidden flex-col items-center justify-center p-4 fade-in">
+        <div class="glass-panel w-full max-w-sm rounded-3xl p-6 flex flex-col items-center relative bg-white/95 max-h-[90vh] overflow-y-auto">
+            <button onclick="closePinModal()" class="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition shadow-sm border border-gray-200">
+                <i class="fas fa-times"></i>
+            </button>
+            
+            <!-- Vista Principal: Lista de Admins + Controles de Capacidad + Formulario de Registro -->
+            <div id="admin-main-view" class="w-full flex flex-col items-center">
+                <div class="w-14 h-14 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 text-2xl mb-3 shadow-sm border border-indigo-200">
+                    <i class="fas fa-users-cog"></i>
+                </div>
+                <h3 class="text-xl font-black text-gray-900 mb-2">Administradores</h3>
+                
+                <!-- Control de Espacios (+ / -) -->
+                <div class="flex items-center gap-3 mb-4 bg-gray-100/90 px-3.5 py-1.5 rounded-2xl border border-gray-200 shadow-inner">
+                    <span class="text-gray-600 text-xs font-medium">Espacios: <span id="admin-slots-count" class="font-black text-indigo-600">0 / 3</span></span>
+                    <div class="flex items-center gap-1.5 border-l border-gray-300 pl-2.5">
+                        <button onclick="promptChangeAdminSlots(-1)" class="w-6 h-6 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-red-50 hover:text-red-600 hover:border-red-200 flex items-center justify-center text-[10px] font-bold shadow-sm transition active:scale-90" title="Restar un espacio">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                        <button onclick="promptChangeAdminSlots(1)" class="w-6 h-6 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 flex items-center justify-center text-[10px] font-bold shadow-sm transition active:scale-90" title="Agregar un espacio">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Lista de los espacios -->
+                <div id="admin-slots-list" class="w-full space-y-2 mb-5 max-h-[32vh] overflow-y-auto pr-1">
+                    <!-- Se inyectan dinámicamente -->
+                </div>
+
+                <!-- Sección para registrarse (Solo visible si este dispositivo NO es admin y hay lugar) -->
+                <div id="admin-register-section" class="w-full border-t border-gray-200 pt-4 flex flex-col items-center">
+                    <h4 class="text-sm font-bold text-gray-800 mb-3">Registrar este dispositivo</h4>
+                    <input type="text" id="admin-name-input" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-2.5 mb-2.5 text-sm text-gray-800 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-400 shadow-inner" placeholder="Tu Nombre (Ej. Ing. López)">
+                    <input type="password" id="pin-input" maxlength="4" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-2.5 mb-4 text-center tracking-[1em] text-xl text-gray-800 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-400 shadow-inner" placeholder="••••">
+                    <button onclick="verifyAndRegisterAdmin()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition active:scale-95 shadow-lg text-sm">
+                        Ocupar Espacio con PIN
+                    </button>
+                </div>
+
+                <!-- Mensaje cuando todos los lugares están llenos y no eres admin -->
+                <div id="admin-full-msg" class="w-full border-t border-gray-200 pt-3 hidden text-center">
+                    <p class="text-xs text-amber-700 bg-amber-50 border border-amber-200 p-2.5 rounded-xl font-semibold"><i class="fas fa-info-circle mr-1"></i> Todos los espacios están ocupados. Elimina un dispositivo o agrega más espacios con el botón (+).</p>
+                </div>
+            </div>
+
+            <!-- Vista Secundaria: Confirmar PIN para eliminar a un Admin -->
+            <div id="admin-delete-confirm-view" class="w-full hidden flex-col items-center text-center py-2">
+                <div class="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center text-red-600 text-2xl mb-3 shadow-inner">
+                    <i class="fas fa-user-times"></i>
+                </div>
+                <h4 class="text-lg font-black text-gray-900 mb-1">Revocar Acceso</h4>
+                <p id="admin-delete-target-desc" class="text-xs text-gray-600 mb-4 px-2">Ingresa el PIN de seguridad para liberar el espacio de este administrador.</p>
+                
+                <input type="password" id="admin-delete-pin-input" maxlength="4" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 mb-4 text-center tracking-[1em] text-2xl text-gray-800 font-bold focus:outline-none focus:ring-2 focus:ring-red-400 shadow-inner" placeholder="••••">
+                
+                <div class="flex w-full gap-2">
+                    <button onclick="cancelRemoveAdmin()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 rounded-xl transition active:scale-95 text-sm">
+                        Cancelar
+                    </button>
+                    <button onclick="confirmRemoveAdmin()" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition active:scale-95 shadow-lg text-sm">
+                        Eliminar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Vista Terciaria: Confirmar PIN para Agregar o Restar Espacios -->
+            <div id="admin-slots-confirm-view" class="w-full hidden flex-col items-center text-center py-2">
+                <div class="w-14 h-14 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 text-2xl mb-3 shadow-inner">
+                    <i class="fas fa-sliders-h"></i>
+                </div>
+                <h4 id="admin-slots-title" class="text-lg font-black text-gray-900 mb-1">Modificar Capacidad</h4>
+                <p id="admin-slots-target-desc" class="text-xs text-gray-600 mb-4 px-2">Ingresa el PIN de seguridad para cambiar el límite de espacios.</p>
+                
+                <input type="password" id="admin-slots-pin-input" maxlength="4" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 mb-4 text-center tracking-[1em] text-2xl text-gray-800 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-400 shadow-inner" placeholder="••••">
+                
+                <div class="flex w-full gap-2">
+                    <button onclick="cancelChangeAdminSlots()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 rounded-xl transition active:scale-95 text-sm">
+                        Cancelar
+                    </button>
+                    <button onclick="confirmChangeAdminSlots()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition active:scale-95 shadow-lg text-sm">
+                        Confirmar
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Modal de Alerta de Borrado para Administradores -->
+    <div id="admin-approval-modal" class="fixed inset-0 bg-black/70 backdrop-blur-xl z-[200] hidden flex-col items-center justify-center p-4 fade-in">
+        <div class="glass-panel w-full max-w-md rounded-3xl p-6 flex flex-col relative bg-white/95 max-h-[90vh]">
+            
+            <!-- Vista 1: Lista de Aprobación -->
+            <div id="approval-list-view" class="flex flex-col h-full w-full">
+                <div class="flex items-center gap-3 mb-4 border-b border-gray-200 pb-3">
+                    <div class="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center text-amber-600 text-xl flex-shrink-0">
+                        <i class="fas fa-bell"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-black text-gray-900">Solicitud de Borrado</h3>
+                        <p class="text-xs text-gray-500 font-medium">Un inspector solicitó eliminar registros</p>
+                    </div>
+                </div>
+                
+                <div id="approval-items-container" class="flex-1 overflow-y-auto space-y-2 mb-4 pr-1 max-h-[50vh]">
+                    <!-- Se inyectan los registros pendientes con checkboxes -->
+                </div>
+
+                <div class="flex gap-3 mt-2">
+                    <button onclick="rejectApprovalRequest()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3 rounded-xl transition active:scale-95">
+                        Rechazar
+                    </button>
+                    <button onclick="showApprovalPinView()" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition active:scale-95 shadow-lg text-sm">
+                        Aprobar Selección
+                    </button>
+                </div>
+            </div>
+
+            <!-- Vista 2: Confirmación de PIN (Seguridad) -->
+            <div id="approval-pin-view" class="hidden flex-col items-center w-full py-4 text-center">
+                <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center text-red-600 text-3xl mb-4 shadow-inner">
+                    <i class="fas fa-shield-halved"></i>
+                </div>
+                <h3 class="text-xl font-black text-gray-900 mb-2">Re-autenticación</h3>
+                <p class="text-sm text-gray-600 mb-6 font-medium bg-red-50 border border-red-100 p-3 rounded-xl">Por seguridad, en caso de que alguien haya tomado tu dispositivo, ingresa el PIN nuevamente para confirmar el borrado definitivo.</p>
+                
+                <input type="password" id="approval-pin-input" maxlength="4" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 mb-5 text-center tracking-[1em] text-2xl text-gray-800 font-bold focus:outline-none focus:ring-2 focus:ring-red-400 shadow-inner" placeholder="••••">
+                
+                <div class="flex w-full gap-3">
+                    <button onclick="cancelApprovalPinView()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3.5 rounded-xl transition active:scale-95">
+                        Cancelar
+                    </button>
+                    <button onclick="executeApprovedDeletion()" class="flex-[2] bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 rounded-xl transition active:scale-95 shadow-lg">
+                        Confirmar Borrado
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
 
     <!-- Modal de Identidad del Inspector (Dinámico por línea) -->
     <div id="inspector-name-modal" class="fixed inset-0 bg-black/40 backdrop-blur-md z-[100] hidden flex-col items-center justify-center p-6 fade-in">
@@ -92,13 +245,18 @@
     <!-- LOBBY (Pantalla de Inicio) -->
     <div id="lobby-screen" class="absolute inset-0 z-40 flex flex-col items-center justify-center p-6 fade-in overflow-y-auto">
         
-        <div class="text-center mb-8 mt-4">
-            <div class="w-24 h-24 glass-panel rounded-3xl flex items-center justify-center text-blue-600 text-4xl mx-auto mb-4 border-2 border-white/70 shadow-lg">
+        <div class="text-center mb-8 mt-4 relative">
+            <div class="w-24 h-24 glass-panel rounded-3xl flex items-center justify-center text-blue-600 text-4xl mx-auto mb-4 border-2 border-white/70 shadow-lg relative z-10">
                 <i class="fas fa-industry"></i>
             </div>
-            <h1 class="text-4xl font-bold text-gray-900 drop-shadow-sm">Delta Tech</h1>
-            <p class="text-gray-700 font-medium mt-1 tracking-wide uppercase text-sm">Control de Calidad</p>
+            <h1 class="text-4xl font-bold text-gray-900 drop-shadow-sm relative z-10">Delta Tech</h1>
+            <p class="text-gray-700 font-medium mt-1 tracking-wide uppercase text-sm relative z-10">Control de Calidad</p>
         </div>
+
+        <!-- Botón de Tendencias OQC (Solo Administradores) -->
+        <a id="btn-oqc-trends-lobby" href="https://cervantesjesse439-jpg.github.io/OQC-TRENDS-/" class="hidden w-full max-w-xs bg-indigo-600 hover:bg-indigo-700 text-white p-3 rounded-2xl shadow-md mb-4 flex items-center justify-center gap-3 transition active:scale-95 border border-indigo-500 font-bold">
+            <i class="fas fa-chart-line text-lg"></i> Ir a Dashboard OQC Trends
+        </a>
 
         <h2 class="text-lg font-bold text-gray-800 mb-4 w-full max-w-xs text-left drop-shadow-sm">Selecciona la línea:</h2>
         
@@ -166,9 +324,13 @@
             </div>
         </div>
 
-        <div class="w-full max-w-xs flex justify-start">
-            <button id="btn-open-export" onclick="openExportModal()" class="mt-4 mb-8 text-sm glass-btn text-gray-800 px-5 py-3 rounded-xl font-bold hover:bg-white/80 transition active:scale-95 flex items-center gap-2 shadow-sm border border-white/60">
-                <i class="fas fa-file-pdf text-red-600 text-lg drop-shadow-sm"></i> Descargar PDF Oficial
+        <!-- Botones Inferiores (Exportar PDF y Gestión de Admin) -->
+        <div class="w-full max-w-xs flex justify-between items-center gap-2 mt-4 mb-8">
+            <button id="btn-open-export" onclick="openExportModal()" class="flex-1 text-sm glass-btn text-gray-800 px-4 py-3 rounded-xl font-bold hover:bg-white/80 transition active:scale-95 flex items-center justify-center gap-2 shadow-sm border border-white/60">
+                <i class="fas fa-file-pdf text-red-600 text-lg drop-shadow-sm"></i> Descargar PDF
+            </button>
+            <button id="btn-register-admin-lobby" onclick="startAdminRegistration()" class="text-sm glass-btn text-indigo-700 px-3.5 py-3 rounded-xl font-bold hover:bg-white/80 transition active:scale-95 flex items-center justify-center gap-1.5 shadow-sm border border-white/60" title="Gestionar Administradores">
+                <i class="fas fa-user-shield text-indigo-600 text-base drop-shadow-sm"></i> <span id="lbl-btn-admin">Admin</span>
             </button>
         </div>
     </div>
@@ -176,7 +338,6 @@
     <!-- MAIN DASHBOARD -->
     <div id="main-dashboard" class="flex-1 overflow-y-auto w-full max-w-md mx-auto glass-panel border-x-0 sm:border-x sm:rounded-none relative pb-24 h-full hidden flex-col z-30">
         
-        <!-- Header -->
         <header id="main-header" class="text-white p-5 rounded-b-[2rem] shadow-lg sticky top-0 z-10 transition-colors duration-300 bg-opacity-90 backdrop-blur-xl border-b border-white/20">
             <div class="flex justify-between items-center mb-2">
                 <div class="flex items-center gap-2">
@@ -188,7 +349,6 @@
                 </div>
                 
                 <div class="flex items-center gap-2">
-                    <!-- Botón del Inspector Asignado -->
                     <button onclick="openInspectorModal()" class="flex items-center gap-1.5 bg-black/20 hover:bg-black/30 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs font-bold border border-white/10 shadow-inner transition">
                         <i class="fas fa-user-tag text-white/80"></i> 
                         <span id="current-inspector-display" class="truncate max-w-[80px]">Buscando...</span>
@@ -211,7 +371,7 @@
             </div>
             
             <div class="grid grid-cols-2 gap-3 mb-8" id="dashboard-stats-container">
-                <!-- Tarjeta Piezas (UPR/COWL/POCKET) -->
+                <!-- Tarjetas de Estadísticas -->
                 <div id="stat-card-piezas" onclick="openReportModal()" class="glass-btn p-4 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden cursor-pointer active:scale-95 border border-white">
                     <div class="absolute top-0 w-full h-1.5 bg-red-400 opacity-80"></div>
                     <i class="fas fa-puzzle-piece text-red-500 text-2xl mb-2 drop-shadow-sm"></i>
@@ -222,8 +382,6 @@
                         <span class="text-green-700 bg-green-100/80 backdrop-blur-sm px-2 py-1 rounded border border-green-200">LH: <span id="stat-piezas-lh">0</span></span>
                     </div>
                 </div>
-
-                <!-- Tarjeta Carros (UPR) -->
                 <div id="stat-card-carros" onclick="openReportModal()" class="glass-btn p-4 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden cursor-pointer active:scale-95 border border-white">
                     <div class="absolute top-0 w-full h-1.5 bg-purple-400 opacity-80"></div>
                     <i class="fas fa-truck text-purple-500 text-2xl mb-2 drop-shadow-sm"></i>
@@ -234,8 +392,6 @@
                         <span class="text-gray-800 bg-white/70 backdrop-blur-sm px-2 py-1 rounded flex justify-between border border-white shadow-sm"><span>Inyección:</span> <span id="stat-carros-inyeccion">0</span></span>
                     </div>
                 </div>
-
-                <!-- Tarjeta Cajas (POCKET) -->
                 <div id="stat-card-cajas" onclick="openReportModal()" class="glass-btn p-4 rounded-2xl flex-col items-center justify-center relative overflow-hidden cursor-pointer active:scale-95 hidden border border-white">
                     <div class="absolute top-0 w-full h-1.5 bg-teal-400 opacity-80"></div>
                     <i class="fas fa-box-open text-teal-500 text-2xl mb-2 drop-shadow-sm"></i>
@@ -246,8 +402,6 @@
                         <span class="text-gray-800 bg-white/70 backdrop-blur-sm px-2 py-1 rounded flex justify-between border border-white shadow-sm"><span>Grande:</span> <span id="stat-cajas-grande">0</span></span>
                     </div>
                 </div>
-                
-                <!-- Tarjeta Tarimas (Solo COVER) -->
                 <div id="stat-card-tarimas" onclick="openReportModal()" class="glass-btn p-5 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden cursor-pointer active:scale-95 col-span-2 hidden border border-white">
                     <div class="absolute top-0 w-full h-1.5 bg-emerald-400 opacity-80"></div>
                     <i class="fas fa-pallet text-emerald-600 text-3xl mb-2 drop-shadow-sm"></i>
@@ -268,30 +422,47 @@
                     <button onclick="toggleDeleteMode()" class="text-xs text-gray-700 glass-btn px-4 py-2 rounded-full font-bold active:scale-95 border border-white">
                         Cancelar
                     </button>
-                    <button onclick="confirmDeletion()" id="btn-confirm-delete" class="text-xs text-white bg-red-500/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-md font-bold opacity-50 pointer-events-none active:scale-95 border border-red-400">
-                        <i class="fas fa-trash"></i> Borrar (0)
+                    <button onclick="requestDeletion()" id="btn-confirm-delete" class="text-xs text-white bg-red-500/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-md font-bold opacity-50 pointer-events-none active:scale-95 border border-red-400">
+                        <i class="fas fa-paper-plane"></i> Solicitar Borrado (0)
                     </button>
                 </div>
             </div>
             
             <div id="bitacora-list" class="space-y-3 pb-8">
-                <!-- Los registros se inyectarán aquí -->
+                <!-- Registros -->
             </div>
         </main>
     </div>
 
-    <!-- Botón Flotante Registrar -->
+    <!-- Botones Flotantes (COVER y Registro Normal) -->
     <div id="btn-registrar-container" class="fixed bottom-0 w-full max-w-md left-1/2 transform -translate-x-1/2 p-4 bg-gradient-to-t from-white/90 via-white/60 to-transparent pb-6 z-40 hidden backdrop-blur-[2px]">
-        <button id="btn-open-wizard" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-2xl shadow-xl transform transition active:scale-95 flex items-center justify-center gap-3 text-lg border border-blue-500 backdrop-blur-sm">
-            <i class="fas fa-plus-circle text-2xl drop-shadow-sm"></i>
-            Registrar Rechazo
+        <div id="container-upr-cowl-pocket" class="w-full">
+            <button id="btn-open-wizard" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-2xl shadow-xl transform transition active:scale-95 flex items-center justify-center gap-3 text-lg border border-blue-500 backdrop-blur-sm">
+                <i class="fas fa-plus-circle text-2xl drop-shadow-sm"></i>
+                Registrar Rechazo
+            </button>
+        </div>
+        <div id="container-cover-actions" class="w-full hidden grid grid-cols-2 gap-3">
+            <button onclick="openCoverPalletsQuick()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-4 rounded-2xl shadow-xl transform transition active:scale-95 flex items-center justify-center gap-2 text-base border border-emerald-500 backdrop-blur-sm">
+                <i class="fas fa-pallet text-xl"></i> Tarimas OK
+            </button>
+            <button onclick="openCoverRejectWizard()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 px-4 rounded-2xl shadow-xl transform transition active:scale-95 flex items-center justify-center gap-2 text-base border border-red-500 backdrop-blur-sm">
+                <i class="fas fa-times-circle text-xl"></i> Rechazo
+            </button>
+        </div>
+    </div>
+
+    <!-- Visor de Fotos Ampliado (Pantalla Completa) -->
+    <div id="photo-viewer-modal" class="fixed inset-0 bg-black/95 backdrop-blur-2xl z-[300] hidden flex-col items-center justify-center fade-in p-4 cursor-pointer" onclick="closePhotoViewer()">
+        <button onclick="closePhotoViewer()" class="absolute top-6 right-6 w-12 h-12 bg-white/20 rounded-full text-white flex items-center justify-center text-2xl hover:bg-white/30 backdrop-blur-md transition active:scale-95 border border-white/20 z-10">
+            <i class="fas fa-times"></i>
         </button>
+        <img id="photo-viewer-img" src="" class="max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl" onclick="event.stopPropagation()">
     </div>
 
     <!-- WIZARD MODAL (Registro) -->
     <div id="wizard-modal" class="fixed inset-0 bg-black/50 backdrop-blur-md z-50 hidden flex-col justify-end fade-in">
         <div class="glass-panel w-full max-w-md mx-auto rounded-t-[2.5rem] h-[88vh] flex flex-col slide-up relative overflow-hidden bg-white/85">
-            
             <div class="p-6 border-b border-white/50 flex justify-between items-center bg-white/50 backdrop-blur-xl z-10 shadow-sm">
                 <div>
                     <h3 class="text-2xl font-black text-gray-900 drop-shadow-sm">Nuevo Registro <span id="wizard-piece-badge" class="bg-black/10 text-xs px-2 py-1 rounded-md ml-1 text-gray-800 font-bold border border-white/50"></span></h3>
@@ -334,12 +505,6 @@
                         <h4 class="text-2xl font-black mb-6 text-gray-900 text-center flex-shrink-0 drop-shadow-sm">Tipo de Daño</h4>
                         <div class="grid grid-cols-2 gap-3 w-full pb-8">
                             
-                            <!-- Opción Especial: Tarimas OK (Solo COVER) -->
-                            <button class="option-btn dmg-btn cover-dmg glass-btn p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 border border-white col-span-2 bg-green-50/50" onclick="selectOption('damage', 'Tarimas OK', 3)">
-                                <div class="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center shadow-inner border border-green-200"><i class="fas fa-check-double text-2xl text-green-500"></i></div>
-                                <span class="font-bold text-gray-900 text-sm text-center">Tarimas OK (Sin piezas malas)</span>
-                            </button>
-
                             <!-- Daños base -->
                             <button class="option-btn dmg-btn upr-dmg cowl-dmg pocket-dmg glass-btn p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 border border-white" onclick="selectOption('damage', 'Ráfaga', 3)">
                                 <div class="w-12 h-12 bg-white/80 rounded-full flex items-center justify-center shadow-inner border border-gray-100"><i class="fas fa-wind text-2xl text-blue-500"></i></div>
@@ -357,8 +522,7 @@
                                 <div class="w-12 h-12 bg-white/80 rounded-full flex items-center justify-center shadow-inner border border-gray-100"><i class="fas fa-grip-lines text-2xl text-stone-500"></i></div>
                                 <span class="font-bold text-gray-900 text-sm text-center">Raspón</span>
                             </button>
-                            <!-- REBABA - Ahora también en COWL -->
-                            <button class="option-btn dmg-btn upr-dmg cowl-dmg pocket-dmg cover-dmg glass-btn p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 border border-white" onclick="selectOption('damage', 'Rebaba', 3)">
+                            <button class="option-btn dmg-btn upr-dmg pocket-dmg cover-dmg cowl-dmg glass-btn p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 border border-white" onclick="selectOption('damage', 'Rebaba', 3)">
                                 <div class="w-12 h-12 bg-white/80 rounded-full flex items-center justify-center shadow-inner border border-gray-100"><i class="fas fa-cut text-2xl text-orange-500"></i></div>
                                 <span class="font-bold text-gray-900 text-sm text-center">Rebaba</span>
                             </button>
@@ -374,13 +538,10 @@
                                 <div class="w-12 h-12 bg-white/80 rounded-full flex items-center justify-center shadow-inner border border-gray-100"><i class="fas fa-compress text-2xl text-red-500"></i></div>
                                 <span class="font-bold text-gray-900 text-sm text-center">Tiro corto</span>
                             </button>
-                            
-                            <!-- FRACTURA (Antes "Poste fracturado") -->
                             <button class="option-btn dmg-btn upr-dmg cowl-dmg pocket-dmg glass-btn p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 border border-white" onclick="selectOption('damage', 'Fractura', 3)">
                                 <div class="w-12 h-12 bg-white/80 rounded-full flex items-center justify-center shadow-inner border border-gray-100"><i class="fas fa-cube text-2xl text-purple-500"></i></div>
                                 <span class="font-bold text-gray-900 text-sm text-center">Fractura</span>
                             </button>
-                            
                             <button class="option-btn dmg-btn upr-dmg cowl-dmg pocket-dmg glass-btn p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 border border-white" onclick="selectOption('damage', 'Burbuja', 3)">
                                 <div class="w-12 h-12 bg-white/80 rounded-full flex items-center justify-center shadow-inner border border-gray-100"><i class="fas fa-droplet text-2xl text-blue-500"></i></div>
                                 <span class="font-bold text-gray-900 text-sm text-center">Burbuja</span>
@@ -428,8 +589,6 @@
                     <div class="min-w-full flex flex-col items-center justify-center p-6 snap-center" id="step-3">
                         <h4 class="text-3xl font-black mb-8 text-gray-900 text-center drop-shadow-sm" id="step-3-title">Variante</h4>
                         <div class="grid grid-cols-2 gap-4 w-full">
-                            
-                            <!-- Colores UPR -->
                             <button class="option-btn glass-btn p-6 rounded-3xl shadow-sm flex flex-col items-center justify-center gap-4 text-gray-900 color-upr border border-white" onclick="selectOption('variant', 'Negro', 4)">
                                 <div class="w-16 h-16 rounded-full bg-gray-900 shadow-lg border-2 border-white/50"></div>
                                 <span class="text-xl font-bold">Negro</span>
@@ -450,7 +609,6 @@
                                 <span class="font-bold text-lg">No Aplica (N/A)</span>
                             </button>
 
-                            <!-- Tamaños POCKET -->
                             <button class="option-btn glass-btn p-8 rounded-3xl shadow-sm flex flex-col items-center justify-center gap-4 text-blue-700 size-pocket hidden border border-white" onclick="selectOption('variant', 'Grande', 4)">
                                 <div class="w-20 h-20 rounded-full bg-white/90 flex items-center justify-center text-4xl shadow-inner border border-blue-100"><i class="fas fa-expand-arrows-alt"></i></div>
                                 <span class="text-2xl font-bold text-gray-900">Grande</span>
@@ -466,8 +624,6 @@
                     <div class="min-w-full flex flex-col items-center justify-center p-6 snap-center" id="step-4">
                         <h4 class="text-2xl font-black mb-8 text-gray-900 text-center drop-shadow-sm">¿Qué presentación es?</h4>
                         <div class="flex flex-col gap-4 w-full">
-                            
-                            <!-- Pieza -->
                             <button class="option-btn type-btn type-upr type-pocket glass-btn p-5 rounded-3xl shadow-sm flex items-center gap-5 border border-white" onclick="selectOption('type', 'Pieza', 5)">
                                 <div class="w-16 h-16 rounded-2xl bg-white/90 flex items-center justify-center text-red-500 text-3xl shadow-inner border border-red-100">
                                     <i class="fas fa-puzzle-piece"></i>
@@ -479,7 +635,6 @@
                                 <i class="fas fa-chevron-right text-gray-400"></i>
                             </button>
                             
-                            <!-- Carros UPR -->
                             <button class="option-btn type-btn type-upr glass-btn p-5 rounded-3xl shadow-sm flex items-center gap-5 hidden border border-white" onclick="selectOption('type', 'Carro de venta', 5)">
                                 <div class="w-16 h-16 rounded-2xl bg-white/90 flex items-center justify-center text-purple-500 text-3xl shadow-inner border border-purple-100">
                                     <i class="fas fa-truck"></i>
@@ -502,7 +657,6 @@
                                 <i class="fas fa-chevron-right text-gray-400"></i>
                             </button>
 
-                            <!-- Cajas POCKET -->
                             <button class="option-btn type-btn type-pocket glass-btn p-5 rounded-3xl shadow-sm flex items-center gap-5 hidden border border-white" onclick="selectOption('type', 'Caja', 5)">
                                 <div class="w-16 h-16 rounded-2xl bg-white/90 flex items-center justify-center text-teal-500 text-3xl shadow-inner border border-teal-100">
                                     <i class="fas fa-box-open"></i>
@@ -618,7 +772,7 @@
         </div>
         
         <div id="details-photos" class="flex-1 overflow-x-auto snap-x-mandatory flex hide-scrollbar items-center gap-4 px-4 pb-4">
-            <!-- Las imágenes originales se inyectan aquí -->
+            <!-- Fotos originales -->
         </div>
         
         <div class="bg-white/90 backdrop-blur-2xl rounded-t-[2.5rem] p-7 slide-up shadow-[0_-10px_40px_rgba(0,0,0,0.3)] border-t border-white/50">
@@ -627,17 +781,12 @@
                 <span id="details-time" class="text-sm font-bold text-gray-500 bg-black/5 px-2 py-1 rounded-md"></span>
             </div>
             <p id="details-damage" class="text-red-600 font-black text-xl mb-3 drop-shadow-sm">-</p>
-            <div id="details-badges" class="flex flex-wrap gap-2 mb-4">
-                <!-- Badges de lado/variante se inyectan aquí -->
-            </div>
+            <div id="details-badges" class="flex flex-wrap gap-2 mb-4"></div>
             
-            <!-- SECCIÓN CLONAR FOTOS -->
             <div class="bg-black/5 p-4 rounded-2xl border border-black/10 shadow-inner mb-4">
                 <span class="text-sm font-bold text-gray-700 uppercase tracking-wide block mb-2">Fotos para el clon (Opcional):</span>
                 <div class="flex items-center gap-3">
-                    <div id="clone-photo-preview" class="flex gap-2 overflow-x-auto hide-scrollbar flex-1">
-                        <!-- Las fotos clonables con tachecito van aquí -->
-                    </div>
+                    <div id="clone-photo-preview" class="flex gap-2 overflow-x-auto hide-scrollbar flex-1"></div>
                     <label class="w-10 h-10 flex-shrink-0 bg-white border border-gray-300 rounded-xl flex items-center justify-center text-gray-600 cursor-pointer hover:bg-gray-50 shadow-sm transition">
                         <i class="fas fa-camera"></i>
                         <input type="file" accept="image/*" class="hidden" onchange="handleClonePhotos(event)">
@@ -645,7 +794,6 @@
                 </div>
             </div>
 
-            <!-- SECCIÓN CLONAR CANTIDAD -->
             <div class="flex items-center justify-between mb-5 bg-black/5 p-4 rounded-2xl border border-black/10 shadow-inner">
                 <span class="text-sm font-bold text-gray-700 uppercase tracking-wide">Clonar cantidad:</span>
                 <div class="flex items-center gap-5">
@@ -659,14 +807,6 @@
                 <i class="fas fa-copy text-2xl"></i> Registrar más iguales
             </button>
         </div>
-    </div>
-
-    <!-- Visor de Fotos Ampliado (NUEVO) -->
-    <div id="photo-viewer-modal" class="fixed inset-0 bg-black/90 backdrop-blur-xl z-[200] hidden flex-col items-center justify-center fade-in p-4 cursor-pointer" onclick="closePhotoViewer()">
-        <button onclick="closePhotoViewer()" class="absolute top-6 right-6 w-12 h-12 bg-white/20 rounded-full text-white flex items-center justify-center text-2xl hover:bg-white/30 backdrop-blur-md transition active:scale-95 border border-white/20 z-10">
-            <i class="fas fa-times"></i>
-        </button>
-        <img id="photo-viewer-img" src="" class="max-w-full max-h-full object-contain rounded-2xl shadow-2xl" onclick="event.stopPropagation()">
     </div>
 
     <!-- Modal de Reporte Diario Inteligente -->
@@ -687,9 +827,7 @@
                 <input type="date" id="report-date-picker" class="flex-1 bg-white border border-gray-300 text-gray-900 rounded-xl px-4 py-2.5 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm" onchange="generateReportContent()">
             </div>
 
-            <div id="report-content" class="flex-1 overflow-y-auto p-5 bg-transparent space-y-4 pb-24">
-                <!-- Contenido generado dinámicamente -->
-            </div>
+            <div id="report-content" class="flex-1 overflow-y-auto p-5 bg-transparent space-y-4 pb-24"></div>
         </div>
     </div>
 
@@ -716,16 +854,15 @@
     </div>
 
     <!-- Notificaciones -->
-    <div id="top-alert" class="fixed top-0 left-0 w-full bg-red-500/95 backdrop-blur-md text-white p-4 text-center text-sm font-bold shadow-lg z-[200] transform -translate-y-full transition-transform duration-300 flex items-center justify-center gap-2 border-b border-red-400">
+    <div id="top-alert" class="fixed top-0 left-0 w-full bg-red-500/95 backdrop-blur-md text-white p-4 text-center text-sm font-bold shadow-lg z-[350] transform -translate-y-full transition-transform duration-300 flex items-center justify-center gap-2 border-b border-red-400">
         <i class="fas fa-exclamation-triangle"></i> <span id="top-alert-msg"></span>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, setDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // 🚨 CONFIGURACIÓN DE FIREBASE 🚨
         let firebaseConfig = {
             apiKey: "AIzaSyC6-UX4jsL4nfyprVw1PviZzHwnKbWLipA",
             authDomain: "delta-9c75f.firebaseapp.com",
@@ -737,16 +874,33 @@
         };
 
         let allRecords = [];
+        let allAdmins = [];
+        let maxAdminSlots = 3;
+        let pendingSlotChangeDelta = 0;
+
         let newRecordData = { side: null, damage: null, variant: null, type: null, quantity: 1, pallets: 1, photos: [] };
-        let db, auth, currentUser, rechazosRef;
+        let db, auth, currentUser, rechazosRef, approvalsRef, adminsRef, adminConfigDocRef;
         let isDeleteMode = false;
         let selectedForDeletion = new Set();
         let currentPiece = null; 
         let cloneQuantityValue = 1;
         let clonePhotos = []; 
-        
         let inspectorName = '';
         let unsubscribeInspector = null;
+        let unsubscribeApprovals = null;
+        let unsubscribeAdmins = null;
+        let unsubscribeAdminConfig = null;
+        
+        let deviceUuid = localStorage.getItem('delta_device_uuid') || '';
+        if (!deviceUuid) {
+            deviceUuid = 'dev_' + Math.random().toString(36).substring(2, 9);
+            localStorage.setItem('delta_device_uuid', deviceUuid);
+        }
+
+        const CORRECT_PIN = "2486";
+        let isAdmin = localStorage.getItem('delta_is_admin') === 'true';
+        let adminSavedName = localStorage.getItem('delta_admin_name') || '';
+        let targetAdminToRemove = null;
 
         const getLocalDateString = () => {
             const now = new Date();
@@ -758,15 +912,12 @@
             return new Date(dateString + 'T12:00:00').toLocaleDateString('es-MX', options).replace(/^\w/, c => c.toUpperCase());
         };
 
-        // --- Lógica Principal: MIGRACIÓN DE DAÑOS EN COWL ---
         const getFilteredRecords = () => {
             return allRecords.filter(r => (r.pieceType || 'UPR') === currentPiece).map(r => {
                 let correctedRecord = { ...r };
-                // Migración 1: Sin etiqueta -> Contaminación (Solo en COWL)
                 if (correctedRecord.pieceType === 'COWL' && correctedRecord.damage === 'Sin etiqueta') {
                     correctedRecord.damage = 'Contaminación';
                 }
-                // Migración 2: Poste fracturado -> Fractura (Global para registros pasados)
                 if (correctedRecord.damage === 'Poste fracturado') {
                     correctedRecord.damage = 'Fractura';
                 }
@@ -774,7 +925,7 @@
             });
         };
 
-        // --- VISOR DE FOTOS AMPLIADO ---
+        // --- VISOR DE FOTOS PANTALLA COMPLETA ---
         window.openPhotoViewer = function(src) {
             document.getElementById('photo-viewer-img').src = src;
             document.getElementById('photo-viewer-modal').classList.remove('hidden');
@@ -787,7 +938,7 @@
             setTimeout(() => document.getElementById('photo-viewer-img').src = '', 300);
         };
 
-        // --- SISTEMA DE IDENTIDAD DINÁMICA POR PIEZA ---
+        // --- SISTEMA DE IDENTIDAD DE INSPECTOR ---
         window.openInspectorModal = function() {
             document.getElementById('inspector-name-input').value = localStorage.getItem('delta_last_name') || '';
             document.getElementById('inspector-modal-desc').textContent = `Ingresa tu nombre para ser el inspector oficial de ${currentPiece} hoy.`;
@@ -830,12 +981,266 @@
                     inspectorName = data.inspectorName;
                     document.getElementById('current-inspector-display').textContent = inspectorName;
                 } else {
-                    inspectorName = '';
-                    document.getElementById('current-inspector-display').textContent = 'Nadie asignado';
-                    openInspectorModal(); 
+                    if (isAdmin && adminSavedName) {
+                        inspectorName = adminSavedName;
+                        document.getElementById('current-inspector-display').textContent = `${adminSavedName} (Admin)`;
+                    } else {
+                        inspectorName = '';
+                        document.getElementById('current-inspector-display').textContent = 'Nadie asignado';
+                        openInspectorModal(); 
+                    }
                 }
             });
         }
+
+        // --- SISTEMA DE ONBOARDING Y CENTRO DE GESTIÓN DE ADMINISTRADORES ---
+        function checkFirstTimeAdmin() {
+            const hasPrompted = localStorage.getItem('delta_prompted_admin');
+            if (!hasPrompted && !isAdmin) {
+                document.getElementById('admin-onboarding-modal').classList.remove('hidden');
+                document.getElementById('admin-onboarding-modal').classList.add('flex');
+            }
+        }
+
+        function updateAdminUI() {
+            const btnOqc = document.getElementById('btn-oqc-trends-lobby');
+            const lblBtnAdmin = document.getElementById('lbl-btn-admin');
+            if (isAdmin) {
+                btnOqc.classList.remove('hidden');
+                btnOqc.classList.add('flex');
+            } else {
+                btnOqc.classList.add('hidden');
+                btnOqc.classList.remove('flex');
+            }
+            if (lblBtnAdmin) lblBtnAdmin.textContent = `Admin (${allAdmins.length}/${maxAdminSlots})`;
+        }
+
+        function renderAdminModalContent() {
+            const countEl = document.getElementById('admin-slots-count');
+            const listEl = document.getElementById('admin-slots-list');
+            const regSec = document.getElementById('admin-register-section');
+            const fullMsg = document.getElementById('admin-full-msg');
+
+            if (countEl) countEl.textContent = `${allAdmins.length} / ${maxAdminSlots}`;
+
+            if (listEl) {
+                let html = '';
+                const totalToRender = Math.max(maxAdminSlots, allAdmins.length);
+                for (let i = 0; i < totalToRender; i++) {
+                    const adm = allAdmins[i];
+                    if (adm) {
+                        const isMe = adm.id === deviceUuid;
+                        html += `
+                            <div class="flex items-center justify-between p-3 rounded-2xl border ${isMe ? 'bg-indigo-50/90 border-indigo-300' : 'bg-gray-50 border-gray-200'} shadow-sm">
+                                <div class="flex items-center gap-2.5 overflow-hidden">
+                                    <div class="w-9 h-9 rounded-full ${isMe ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-600'} flex items-center justify-center font-bold text-sm flex-shrink-0">
+                                        <i class="fas fa-user-shield"></i>
+                                    </div>
+                                    <div class="truncate">
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="font-bold text-sm text-gray-900 truncate">${adm.name || 'Admin'}</span>
+                                            ${isMe ? '<span class="bg-indigo-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded uppercase">Tú</span>' : ''}
+                                        </div>
+                                        <span class="text-[10px] text-gray-400 font-medium block">ID: ${adm.id.substring(0, 8)}</span>
+                                    </div>
+                                </div>
+                                <button onclick="promptRemoveAdmin('${adm.id}', '${(adm.name || 'Admin').replace(/'/g, "\\'")}', ${isMe})" class="px-2.5 py-1.5 rounded-xl text-xs font-bold ${isMe ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-gray-200 text-gray-700 hover:bg-red-100 hover:text-red-600'} transition active:scale-95 flex items-center gap-1 flex-shrink-0">
+                                    <i class="fas ${isMe ? 'fa-sign-out-alt' : 'fa-trash'}"></i> ${isMe ? 'Salir' : ''}
+                                </button>
+                            </div>
+                        `;
+                    } else {
+                        html += `
+                            <div class="flex items-center justify-between p-3 rounded-2xl border border-dashed border-gray-300 bg-white/40 text-gray-400">
+                                <div class="flex items-center gap-2.5">
+                                    <div class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-sm">
+                                        <i class="fas fa-plus"></i>
+                                    </div>
+                                    <span class="text-xs font-bold">Espacio Disponible #${i + 1}</span>
+                                </div>
+                                <span class="text-[10px] font-semibold uppercase tracking-wider">Libre</span>
+                            </div>
+                        `;
+                    }
+                }
+                listEl.innerHTML = html;
+            }
+
+            if (regSec && fullMsg) {
+                if (isAdmin) {
+                    regSec.classList.add('hidden');
+                    fullMsg.classList.add('hidden');
+                } else {
+                    if (allAdmins.length >= maxAdminSlots) {
+                        regSec.classList.add('hidden');
+                        fullMsg.classList.remove('hidden');
+                    } else {
+                        regSec.classList.remove('hidden');
+                        fullMsg.classList.add('hidden');
+                    }
+                }
+            }
+        }
+
+        window.skipAdminOnboarding = function() {
+            localStorage.setItem('delta_prompted_admin', 'true');
+            document.getElementById('admin-onboarding-modal').classList.add('hidden');
+            document.getElementById('admin-onboarding-modal').classList.remove('flex');
+        };
+
+        window.startAdminRegistration = function() {
+            localStorage.setItem('delta_prompted_admin', 'true');
+            document.getElementById('admin-onboarding-modal').classList.add('hidden');
+            document.getElementById('admin-onboarding-modal').classList.remove('flex');
+            
+            cancelRemoveAdmin();
+            cancelChangeAdminSlots();
+            document.getElementById('admin-name-input').value = adminSavedName || localStorage.getItem('delta_last_name') || '';
+            document.getElementById('pin-input').value = '';
+            renderAdminModalContent();
+
+            document.getElementById('pin-modal').classList.remove('hidden');
+            document.getElementById('pin-modal').classList.add('flex');
+        };
+
+        window.closePinModal = function() {
+            document.getElementById('pin-modal').classList.add('hidden');
+            document.getElementById('pin-modal').classList.remove('flex');
+        };
+
+        // --- AGREGAR O RESTAR ESPACIOS DE ADMINISTRADOR CON PIN ---
+        window.promptChangeAdminSlots = function(delta) {
+            const newTotal = maxAdminSlots + delta;
+            if (newTotal < 1) {
+                return showNotification("Debe existir al menos 1 espacio de administrador.");
+            }
+            if (newTotal < allAdmins.length) {
+                return showNotification(`No puedes reducir a ${newTotal} porque ya hay ${allAdmins.length} administradores activos. Elimina uno primero.`);
+            }
+
+            pendingSlotChangeDelta = delta;
+            document.getElementById('admin-main-view').classList.add('hidden');
+            document.getElementById('admin-main-view').classList.remove('flex');
+            document.getElementById('admin-delete-confirm-view').classList.add('hidden');
+            document.getElementById('admin-delete-confirm-view').classList.remove('flex');
+
+            const actionText = delta > 0 ? "Aumentar" : "Reducir";
+            document.getElementById('admin-slots-title').textContent = `${actionText} Espacios`;
+            document.getElementById('admin-slots-target-desc').textContent = `Ingresa el PIN para cambiar la capacidad máxima de ${maxAdminSlots} a ${newTotal} espacios.`;
+            document.getElementById('admin-slots-pin-input').value = '';
+
+            document.getElementById('admin-slots-confirm-view').classList.remove('hidden');
+            document.getElementById('admin-slots-confirm-view').classList.add('flex');
+        };
+
+        window.cancelChangeAdminSlots = function() {
+            pendingSlotChangeDelta = 0;
+            document.getElementById('admin-slots-confirm-view').classList.add('hidden');
+            document.getElementById('admin-slots-confirm-view').classList.remove('flex');
+            document.getElementById('admin-main-view').classList.remove('hidden');
+            document.getElementById('admin-main-view').classList.add('flex');
+        };
+
+        window.confirmChangeAdminSlots = async function() {
+            const pinVal = document.getElementById('admin-slots-pin-input').value.trim();
+            if (pinVal !== CORRECT_PIN) return showNotification("PIN incorrecto.");
+            if (!pendingSlotChangeDelta) return;
+
+            const newMax = maxAdminSlots + pendingSlotChangeDelta;
+            if (newMax < 1 || newMax < allAdmins.length) {
+                cancelChangeAdminSlots();
+                return showNotification("Operación no válida con la cantidad actual de administradores.");
+            }
+
+            try {
+                await setDoc(adminConfigDocRef, { maxSlots: newMax, updatedAt: Date.now() }, { merge: true });
+                maxAdminSlots = newMax;
+                showNotification(`Capacidad actualizada a ${newMax} espacios.`);
+                cancelChangeAdminSlots();
+                updateAdminUI();
+                renderAdminModalContent();
+            } catch (e) {
+                console.error(e);
+                showNotification("Error al actualizar los espacios en la nube.");
+            }
+        };
+
+        // --- REVOCAR ACCESO DE UN ADMINISTRADOR CON PIN ---
+        window.promptRemoveAdmin = function(targetUuid, targetName, isSelf) {
+            targetAdminToRemove = targetUuid;
+            document.getElementById('admin-main-view').classList.add('hidden');
+            document.getElementById('admin-main-view').classList.remove('flex');
+            document.getElementById('admin-slots-confirm-view').classList.add('hidden');
+            document.getElementById('admin-slots-confirm-view').classList.remove('flex');
+            
+            const desc = isSelf 
+                ? `Ingresa el PIN para darte de baja como administrador (${targetName}) y liberar tu espacio.`
+                : `Ingresa el PIN para eliminar el dispositivo de "${targetName}" y liberar su espacio.`;
+            document.getElementById('admin-delete-target-desc').textContent = desc;
+            document.getElementById('admin-delete-pin-input').value = '';
+
+            document.getElementById('admin-delete-confirm-view').classList.remove('hidden');
+            document.getElementById('admin-delete-confirm-view').classList.add('flex');
+        };
+
+        window.cancelRemoveAdmin = function() {
+            targetAdminToRemove = null;
+            document.getElementById('admin-delete-confirm-view').classList.add('hidden');
+            document.getElementById('admin-delete-confirm-view').classList.remove('flex');
+            document.getElementById('admin-main-view').classList.remove('hidden');
+            document.getElementById('admin-main-view').classList.add('flex');
+        };
+
+        window.confirmRemoveAdmin = async function() {
+            const pinVal = document.getElementById('admin-delete-pin-input').value.trim();
+            if (pinVal !== CORRECT_PIN) return showNotification("PIN incorrecto.");
+            if (!targetAdminToRemove) return;
+
+            try {
+                await deleteDoc(doc(db, 'delta_admins', targetAdminToRemove));
+                if (targetAdminToRemove === deviceUuid) {
+                    isAdmin = false;
+                    localStorage.setItem('delta_is_admin', 'false');
+                    showNotification("Te has dado de baja como Administrador.");
+                } else {
+                    showNotification("Dispositivo administrador eliminado.");
+                }
+                cancelRemoveAdmin();
+            } catch(e) {
+                console.error(e);
+                showNotification("Error al eliminar administrador.");
+            }
+        };
+
+        window.verifyAndRegisterAdmin = async function() {
+            const adminName = document.getElementById('admin-name-input').value.trim();
+            const pinVal = document.getElementById('pin-input').value.trim();
+            
+            if (!adminName) return showNotification("Ingresa el nombre del administrador.");
+            if (pinVal !== CORRECT_PIN) return showNotification("PIN incorrecto.");
+
+            try {
+                const alreadyRegistered = allAdmins.some(a => a.id === deviceUuid);
+                if (!alreadyRegistered && allAdmins.length >= maxAdminSlots) {
+                    return showNotification(`Límite máximo de ${maxAdminSlots} administradores alcanzado.`);
+                }
+
+                const adminDocRef = doc(db, 'delta_admins', deviceUuid);
+                await setDoc(adminDocRef, { name: adminName, registeredAt: Date.now(), uuid: deviceUuid });
+                
+                isAdmin = true;
+                adminSavedName = adminName;
+                localStorage.setItem('delta_is_admin', 'true');
+                localStorage.setItem('delta_admin_name', adminName);
+                localStorage.setItem('delta_last_name', adminName);
+                
+                document.getElementById('pin-input').value = '';
+                showNotification(`¡Bienvenido, ${adminName}! Este dispositivo ahora es Administrador.`);
+            } catch(e) {
+                console.error(e);
+                showNotification("Error al registrar administrador.");
+            }
+        };
 
         async function initApp() {
             document.getElementById('current-date-display').textContent = formatDateToDisplay(getLocalDateString());
@@ -845,24 +1250,78 @@
                 auth = getAuth(app);
                 db = getFirestore(app);
                 rechazosRef = collection(db, 'rechazos_delta');
+                approvalsRef = collection(db, 'delta_approvals');
+                adminsRef = collection(db, 'delta_admins');
+                adminConfigDocRef = doc(db, 'delta_config', 'admin_settings');
 
                 await signInAnonymously(auth);
                 currentUser = auth.currentUser;
+
+                // Listener para configuración dinámica de capacidad de espacios
+                if (unsubscribeAdminConfig) unsubscribeAdminConfig();
+                unsubscribeAdminConfig = onSnapshot(adminConfigDocRef, (docSnap) => {
+                    if (docSnap.exists() && typeof docSnap.data().maxSlots === 'number') {
+                        maxAdminSlots = docSnap.data().maxSlots;
+                    } else {
+                        maxAdminSlots = 3;
+                    }
+                    updateAdminUI();
+                    renderAdminModalContent();
+                });
+
+                // Listener en tiempo real para la lista de Administradores
+                if (unsubscribeAdmins) unsubscribeAdmins();
+                unsubscribeAdmins = onSnapshot(adminsRef, (snap) => {
+                    allAdmins = [];
+                    let isFound = false;
+                    snap.forEach(d => {
+                        const data = d.data();
+                        allAdmins.push({ id: d.id, ...data });
+                        if (d.id === deviceUuid) {
+                            isFound = true;
+                            adminSavedName = data.name || adminSavedName;
+                            if (adminSavedName) localStorage.setItem('delta_admin_name', adminSavedName);
+                        }
+                    });
+                    
+                    allAdmins.sort((a, b) => (a.registeredAt || 0) - (b.registeredAt || 0));
+                    isAdmin = isFound;
+                    localStorage.setItem('delta_is_admin', isAdmin ? 'true' : 'false');
+
+                    updateAdminUI();
+                    renderAdminModalContent();
+
+                    if (!isAdmin) {
+                        checkFirstTimeAdmin();
+                    }
+                });
 
                 onSnapshot(rechazosRef, (snapshot) => {
                     allRecords = [];
                     snapshot.forEach(docSnap => allRecords.push({ id: docSnap.id, ...docSnap.data() }));
                     
                     document.getElementById('cloud-status').innerHTML = '<i class="fas fa-cloud text-green-400 drop-shadow"></i>';
-                    document.getElementById('lobby-cloud-status').innerHTML = '<i class="fas fa-cloud text-green-600 drop-shadow"></i> Nube Sincronizada';
+                    document.getElementById('lobby-cloud-status').innerHTML = '<i class="fas fa-cloud text-green-600 drop-shadow"></i> Sincronizado';
                     
                     if(currentPiece) {
                         updateDashboard();
                         renderBitacora();
                     }
-                }, (error) => {
-                    console.error(error);
-                    document.getElementById('cloud-status').innerHTML = '<i class="fas fa-exclamation-triangle text-red-400"></i> Error Base Datos';
+                });
+
+                // Listener para solicitudes de borrado (Solo para Administradores)
+                if (unsubscribeApprovals) unsubscribeApprovals();
+                unsubscribeApprovals = onSnapshot(approvalsRef, (snapshot) => {
+                    if (!isAdmin) return; 
+                    
+                    let foundPending = false;
+                    snapshot.forEach(docSnap => {
+                        const data = docSnap.data();
+                        if (data.status === 'pending' && !foundPending) {
+                            foundPending = true;
+                            showApprovalAdminModal(docSnap.id, data);
+                        }
+                    });
                 });
 
             } catch (error) {
@@ -907,6 +1366,9 @@
             document.getElementById('summary-pallets-row').classList.add('hidden');
             document.getElementById('summary-type-row').classList.remove('hidden');
 
+            const containerUprCowlPocket = document.getElementById('container-upr-cowl-pocket');
+            const containerCover = document.getElementById('container-cover-actions');
+
             header.className = 'text-white p-5 rounded-b-[2rem] shadow-lg sticky top-0 z-10 transition-colors duration-300 bg-opacity-90 backdrop-blur-xl border-b border-white/20';
             
             if(piece === 'UPR') {
@@ -919,6 +1381,7 @@
                 document.getElementById('step-3-title').textContent = 'Color';
                 document.getElementById('summary-variant-label').textContent = 'Color';
                 document.getElementById('summary-variant-row').classList.remove('hidden');
+                containerUprCowlPocket.classList.remove('hidden'); containerCover.classList.add('hidden');
                 btnMain.innerHTML = '<i class="fas fa-plus-circle text-2xl drop-shadow-sm"></i> Registrar Rechazo';
 
             } else if (piece === 'COWL') {
@@ -927,6 +1390,7 @@
                 document.getElementById('step-4').classList.remove('flex'); document.getElementById('step-4').classList.add('hidden');
                 document.getElementById('summary-type-row').classList.add('hidden');
                 document.getElementById('stat-card-piezas').classList.add('col-span-2');
+                containerUprCowlPocket.classList.remove('hidden'); containerCover.classList.add('hidden');
                 btnMain.innerHTML = '<i class="fas fa-plus-circle text-2xl drop-shadow-sm"></i> Registrar Rechazo';
 
             } else if (piece === 'POCKET') {
@@ -939,6 +1403,7 @@
                 document.getElementById('step-3-title').textContent = 'Tamaño';
                 document.getElementById('summary-variant-label').textContent = 'Tamaño';
                 document.getElementById('summary-variant-row').classList.remove('hidden');
+                containerUprCowlPocket.classList.remove('hidden'); containerCover.classList.add('hidden');
                 btnMain.innerHTML = '<i class="fas fa-plus-circle text-2xl drop-shadow-sm"></i> Registrar Rechazo';
 
             } else if (piece === 'COVER') {
@@ -948,12 +1413,9 @@
                 document.getElementById('summary-type-row').classList.add('hidden');
                 document.getElementById('stat-card-piezas').classList.add('hidden');
                 document.getElementById('stat-card-tarimas').classList.remove('hidden');
-                document.getElementById('cover-pallets-container').classList.remove('hidden');
-                document.getElementById('summary-pallets-row').classList.remove('hidden');
-                document.getElementById('lbl-cantidad-rechazos').textContent = "Piezas Rechazadas";
-                document.getElementById('summary-lbl-cantidad').textContent = "Total Rechazos";
-                document.querySelectorAll('.na-option').forEach(el => el.classList.add('hidden'));
-                btnMain.innerHTML = '<i class="fas fa-pallet text-2xl drop-shadow-sm"></i> Registrar Tarimas / Rechazo';
+                document.getElementById('cover-pallets-container').classList.add('hidden');
+                document.getElementById('summary-pallets-row').classList.add('hidden');
+                containerUprCowlPocket.classList.add('hidden'); containerCover.classList.remove('hidden');
             }
 
             updateDashboard();
@@ -967,6 +1429,35 @@
             document.getElementById('lobby-screen').classList.remove('hidden');
             document.getElementById('main-dashboard').classList.add('hidden');
             document.getElementById('btn-registrar-container').classList.add('hidden');
+        };
+
+        window.openCoverPalletsQuick = async function() {
+            const activeName = inspectorName || (isAdmin ? adminSavedName : '');
+            if(!activeName) { openInspectorModal(); return showNotification("Configura quién está inspeccionando."); }
+            
+            let palletsCount = prompt("¿Cuántas tarimas limpias/revisadas deseas registrar?", "1");
+            if (!palletsCount || isNaN(palletsCount) || parseInt(palletsCount) <= 0) return;
+
+            try {
+                await addDoc(rechazosRef, {
+                    side: 'N/A', damage: 'Tarimas OK', variant: 'N/A', type: 'Pieza',
+                    quantity: 0, pallets: parseInt(palletsCount), photos: [],
+                    pieceType: 'COVER', timestamp: Date.now(), dateString: getLocalDateString(),
+                    inspectorId: currentUser.uid.substring(0, 4), inspectorName: activeName
+                });
+                showNotification(`¡Se registraron ${palletsCount} tarimas OK!`);
+            } catch(e) {
+                console.error(e);
+                showNotification("Error al guardar tarimas.");
+            }
+        };
+
+        window.openCoverRejectWizard = function() {
+            const activeName = inspectorName || (isAdmin ? adminSavedName : '');
+            if(!activeName) { openInspectorModal(); return showNotification("Configura quién está inspeccionando."); }
+            document.getElementById('wizard-modal').classList.remove('hidden');
+            document.getElementById('wizard-modal').classList.add('flex');
+            resetWizard();
         };
 
         function updateDashboard() {
@@ -1079,14 +1570,13 @@
 
             const photoContainer = document.getElementById('details-photos');
             if (r.photos && r.photos.length > 0) {
-                photoContainer.innerHTML = r.photos.map(p => `<img src="${p}" class="w-full max-h-[60vh] object-contain snap-center rounded-2xl bg-black/80 shadow-2xl border border-white/20 cursor-pointer active:scale-95 transition-transform" onclick="openPhotoViewer('${p}')">`).join('');
+                photoContainer.innerHTML = r.photos.map(p => `<img src="${p}" class="w-full max-h-[60vh] object-contain snap-center rounded-2xl bg-black/80 shadow-2xl border border-white/20 cursor-pointer active:scale-95" onclick="openPhotoViewer('${p}')">`).join('');
                 photoContainer.classList.remove('hidden');
             } else {
                 photoContainer.innerHTML = '<div class="w-full flex flex-col items-center justify-center text-white/50 py-12"><i class="fas fa-image text-5xl mb-3"></i><p class="font-bold">Sin fotografías</p></div>';
                 photoContainer.classList.remove('hidden');
             }
 
-            // Preparar las fotos para el clon
             clonePhotos = r.photos ? [...r.photos] : [];
             renderClonePhotos();
 
@@ -1157,7 +1647,9 @@
         };
 
         window.duplicateRecord = async function(id) {
-            if(!inspectorName) return showNotification("¡Atención! Asigna un nombre en la parte de arriba primero.");
+            const activeName = inspectorName || (isAdmin ? adminSavedName : '');
+            if(!activeName) return showNotification("¡Atención! Asigna un nombre en la parte de arriba primero.");
+            
             const original = allRecords.find(x => x.id === id);
             if (!original || !currentUser) return;
 
@@ -1171,14 +1663,14 @@
                 newRecord.timestamp = Date.now();
                 newRecord.dateString = getLocalDateString();
                 newRecord.inspectorId = currentUser.uid.substring(0, 4);
-                newRecord.inspectorName = inspectorName;
+                newRecord.inspectorName = activeName;
                 
                 newRecord.quantity = cloneQuantityValue;
                 if (currentPiece === 'COVER' && newRecord.damage !== 'Tarimas OK') {
-                    newRecord.pallets = 0; // Si clonan rechazos, no clonar las tarimas revisadas
+                    newRecord.pallets = 0; 
                 }
                 
-                newRecord.photos = clonePhotos; // Inyecta las fotos modificadas (solo para el clon)
+                newRecord.photos = clonePhotos;
 
                 await addDoc(rechazosRef, newRecord);
                 showNotification(`¡${cloneQuantityValue} registro(s) extra añadido(s)!`);
@@ -1193,10 +1685,8 @@
         };
 
         document.getElementById('btn-open-wizard').addEventListener('click', () => {
-            if(!inspectorName) {
-                openInspectorModal();
-                return showNotification("Configura quién está inspeccionando.");
-            }
+            const activeName = inspectorName || (isAdmin ? adminSavedName : '');
+            if(!activeName) { openInspectorModal(); return showNotification("Configura quién está inspeccionando."); }
             document.getElementById('wizard-modal').classList.remove('hidden');
             document.getElementById('wizard-modal').classList.add('flex');
             resetWizard();
@@ -1224,21 +1714,6 @@
 
             let nextStep = step;
             if (cat === 'damage') {
-                // LÓGICA TARIMAS OK
-                if (val === 'Tarimas OK') {
-                    document.getElementById('quantity-container-wrapper').classList.add('hidden');
-                    document.getElementById('summary-qty-row').classList.add('hidden');
-                    newRecordData.quantity = 0;
-                } else {
-                    document.getElementById('quantity-container-wrapper').classList.remove('hidden');
-                    document.getElementById('summary-qty-row').classList.remove('hidden');
-                    if (newRecordData.quantity === 0) {
-                        newRecordData.quantity = 1;
-                        document.getElementById('record-quantity').textContent = '1';
-                        document.getElementById('summary-quantity').textContent = '1';
-                    }
-                }
-
                 if (currentPiece === 'COWL' || currentPiece === 'COVER') {
                     newRecordData['variant'] = 'N/A';
                     newRecordData['type'] = 'Pieza';
@@ -1268,7 +1743,6 @@
         window.handlePhotos = async function(e) {
             if(!e.target.files) return;
             if (newRecordData.photos.length >= 3) return showNotification("Máximo 3 fotos permitidas.");
-            
             const file = e.target.files[0];
             if(file) {
                 const b64 = await resizeImageAndConvert(file);
@@ -1336,7 +1810,6 @@
 
         function resetWizard() {
             newRecordData = { side: null, damage: null, variant: null, type: null, quantity: 1, pallets: 1, photos: [] };
-            
             if (currentPiece === 'COVER' || currentPiece === 'COWL') {
                 newRecordData.type = 'Pieza';
                 document.getElementById('summary-type').textContent = 'Pieza';
@@ -1349,17 +1822,11 @@
                 }
             });
             document.getElementById('summary-variant-value').textContent = '-';
-            
             document.getElementById('summary-quantity').textContent = '1';
             document.getElementById('record-quantity').textContent = '1';
             document.getElementById('summary-pallets').textContent = '1';
             document.getElementById('record-pallets').textContent = '1';
-            
-            document.getElementById('quantity-container-wrapper').classList.remove('hidden');
-            document.getElementById('summary-qty-row').classList.remove('hidden');
-
             renderPhotoPreviews();
-            
             document.getElementById('step-1').scrollIntoView({ behavior: 'auto' });
             
             const isShort = (currentPiece === 'COVER' || currentPiece === 'COWL');
@@ -1372,9 +1839,10 @@
                 return showNotification("Completa todos los pasos antes de guardar.");
             }
             if ((currentPiece === 'UPR' || currentPiece === 'POCKET') && !newRecordData.variant) return showNotification("Selecciona la variante.");
-            
             if (!currentUser) return showNotification("No hay conexión a la base de datos.");
-            if (!inspectorName) return showNotification("Falta configurar nombre del inspector.");
+            
+            const activeName = inspectorName || (isAdmin ? adminSavedName : '');
+            if (!activeName) return showNotification("Falta configurar nombre del inspector.");
 
             const btn = document.getElementById('btn-save-record');
             btn.innerHTML = '<i class="fas fa-spinner fa-spin text-2xl"></i> Guardando...'; btn.disabled = true;
@@ -1383,7 +1851,7 @@
                 await addDoc(rechazosRef, {
                     ...newRecordData, pieceType: currentPiece, timestamp: Date.now(), 
                     dateString: getLocalDateString(), inspectorId: currentUser.uid.substring(0, 4),
-                    inspectorName: inspectorName
+                    inspectorName: activeName
                 });
                 document.getElementById('wizard-modal').classList.add('hidden');
                 document.getElementById('wizard-modal').classList.remove('flex');
@@ -1394,7 +1862,7 @@
             }
         });
 
-        // --- BORRADO ---
+        // --- SISTEMA DE SOLICITUD DE BORRADO ---
         window.toggleDeleteMode = function() {
             isDeleteMode = !isDeleteMode; selectedForDeletion.clear();
             document.getElementById('normal-actions').classList.toggle('hidden', isDeleteMode);
@@ -1410,7 +1878,7 @@
 
         function updateDeleteButton() {
             const b = document.getElementById('btn-confirm-delete');
-            b.innerHTML = `<i class="fas fa-trash"></i> Borrar (${selectedForDeletion.size})`;
+            b.innerHTML = `<i class="fas fa-paper-plane"></i> Solicitar Borrado (${selectedForDeletion.size})`;
             if (selectedForDeletion.size > 0) {
                 b.classList.remove('opacity-50', 'pointer-events-none');
             } else {
@@ -1418,24 +1886,131 @@
             }
         }
 
-        window.confirmDeletion = async function() {
+        window.requestDeletion = async function() {
             if (selectedForDeletion.size === 0) return;
-            const b = document.getElementById('btn-confirm-delete');
-            b.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Borrando...';
-            b.classList.add('opacity-50', 'pointer-events-none');
+
+            const itemsToDelete = [];
+            selectedForDeletion.forEach(id => {
+                const rec = allRecords.find(x => x.id === id);
+                if (rec) {
+                    itemsToDelete.push({
+                        id: rec.id,
+                        pieceType: rec.pieceType || currentPiece,
+                        type: rec.type,
+                        damage: rec.damage,
+                        side: rec.side || 'N/A',
+                        quantity: rec.quantity || 1
+                    });
+                }
+            });
+
+            if (itemsToDelete.length === 0) return;
 
             try {
-                for (const id of selectedForDeletion) {
-                    await deleteDoc(doc(db, 'rechazos_delta', id));
-                }
-                showNotification(`¡Se borraron ${selectedForDeletion.size} registros!`);
+                await addDoc(approvalsRef, {
+                    items: itemsToDelete,
+                    status: 'pending',
+                    timestamp: Date.now()
+                });
+
+                showNotification("¡Solicitud enviada! Se eliminarán cuando un administrador lo apruebe.");
                 toggleDeleteMode();
-            } catch(e) { 
-                console.error(e); showNotification("Error al intentar borrar.");
-            } finally { updateDeleteButton(); }
+            } catch(e) {
+                console.error(e);
+                showNotification("Error al enviar la solicitud de borrado.");
+            }
         };
 
-        // --- LOGICA COMÚN DE AGRUPACIÓN (PDF Y HTML) ---
+        // --- MODALES Y LÓGICA DE APROBACIÓN DE ADMIN ---
+        let activeApprovalDocId = null;
+        let activeApprovalItems = [];
+
+        function showApprovalAdminModal(docId, data) {
+            activeApprovalDocId = docId;
+            activeApprovalItems = data.items || [];
+
+            document.getElementById('approval-list-view').classList.remove('hidden');
+            document.getElementById('approval-list-view').classList.add('flex');
+            document.getElementById('approval-pin-view').classList.add('hidden');
+            document.getElementById('approval-pin-view').classList.remove('flex');
+            document.getElementById('approval-pin-input').value = '';
+
+            const container = document.getElementById('approval-items-container');
+            container.innerHTML = activeApprovalItems.map((item, idx) => `
+                <label class="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-100 transition">
+                    <input type="checkbox" checked data-idx="${idx}" class="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500">
+                    <div class="flex-1">
+                        <span class="block font-bold text-gray-900 text-sm">[${item.pieceType}] ${item.type} - ${item.damage}</span>
+                        <span class="text-xs text-gray-500">Lado: ${item.side} | Cantidad: ${item.quantity}</span>
+                    </div>
+                </label>
+            `).join('');
+
+            document.getElementById('admin-approval-modal').classList.remove('hidden');
+            document.getElementById('admin-approval-modal').classList.add('flex');
+        }
+
+        window.rejectApprovalRequest = async function() {
+            if (!activeApprovalDocId) return;
+            try {
+                await setDoc(doc(db, 'delta_approvals', activeApprovalDocId), { status: 'rejected' }, { merge: true });
+                document.getElementById('admin-approval-modal').classList.add('hidden');
+                document.getElementById('admin-approval-modal').classList.remove('flex');
+                showNotification("Solicitud de borrado rechazada.");
+            } catch(e) { console.error(e); }
+        };
+
+        window.showApprovalPinView = function() {
+            const checkboxes = document.querySelectorAll('#approval-items-container input[type="checkbox"]:checked');
+            if (checkboxes.length === 0) return showNotification("Selecciona al menos un registro para borrar.");
+            
+            document.getElementById('approval-list-view').classList.add('hidden');
+            document.getElementById('approval-list-view').classList.remove('flex');
+            document.getElementById('approval-pin-view').classList.remove('hidden');
+            document.getElementById('approval-pin-view').classList.add('flex');
+        };
+
+        window.cancelApprovalPinView = function() {
+            document.getElementById('approval-pin-view').classList.add('hidden');
+            document.getElementById('approval-pin-view').classList.remove('flex');
+            document.getElementById('approval-list-view').classList.remove('hidden');
+            document.getElementById('approval-list-view').classList.add('flex');
+            document.getElementById('approval-pin-input').value = '';
+        };
+
+        window.executeApprovedDeletion = async function() {
+            const pinVal = document.getElementById('approval-pin-input').value.trim();
+            if (pinVal !== CORRECT_PIN) return showNotification("PIN incorrecto.");
+            if (!activeApprovalDocId) return;
+
+            const checkboxes = document.querySelectorAll('#approval-items-container input[type="checkbox"]');
+            const idsToDelete = [];
+            checkboxes.forEach(cb => {
+                if (cb.checked) {
+                    const idx = parseInt(cb.getAttribute('data-idx'));
+                    if (activeApprovalItems[idx]) {
+                        idsToDelete.push(activeApprovalItems[idx].id);
+                    }
+                }
+            });
+
+            try {
+                for (const id of idsToDelete) {
+                    await deleteDoc(doc(db, 'rechazos_delta', id));
+                }
+
+                await setDoc(doc(db, 'delta_approvals', activeApprovalDocId), { status: 'approved' }, { merge: true });
+                
+                document.getElementById('admin-approval-modal').classList.add('hidden');
+                document.getElementById('admin-approval-modal').classList.remove('flex');
+                showNotification(`¡Se aprobaron y borraron ${idsToDelete.length} registros!`);
+            } catch(e) {
+                console.error(e);
+                showNotification("Error al ejecutar el borrado autorizado.");
+            }
+        };
+
+        // --- REPORTES Y PDF ---
         function getGroupedData(records, pieceTarget) {
             let grouped = {};
             let totals = {};
@@ -1450,7 +2025,6 @@
                 
                 if (pieceTarget === 'COVER') totalTarimas += (r.pallets || 0);
 
-                // Excluir "Tarimas OK" del conteo de defectos visuales y tablas.
                 if (dmg !== 'Tarimas OK') {
                     if (!totals[type]) totals[type] = 0;
                     totals[type] += qty;
@@ -1466,7 +2040,6 @@
             return { grouped: Object.values(grouped), totals, totalTarimas };
         }
 
-        // --- REPORTE DIARIO MODAL (HTML) ---
         window.openReportModal = function() {
             const m = document.getElementById('report-modal');
             document.getElementById('report-date-picker').value = getLocalDateString();
@@ -1496,7 +2069,7 @@
             if(pieceTarget === 'POCKET') headerColorClass = 'bg-teal-600';
             if(pieceTarget === 'COVER') headerColorClass = 'bg-emerald-600';
 
-            let summaryText = Object.keys(totals).length > 0 ? Object.keys(totals).map(k => `<span class="font-bold text-white bg-black/20 backdrop-blur-sm border border-white/20 px-3 py-1 rounded-lg text-sm shadow-sm">${totals[k]} ${k}</span>`).join(' ') : '<span class="font-bold text-white bg-black/20 backdrop-blur-sm border border-white/20 px-3 py-1 rounded-lg text-sm shadow-sm">0 Rechazos</span>';
+            let summaryText = Object.keys(totals).length > 0 ? Object.keys(totals).map(k => `<span class="font-bold text-white bg-black/25 backdrop-blur-sm border border-white/20 px-3 py-1 rounded-lg text-sm shadow-sm">${totals[k]} ${k}</span>`).join(' ') : '<span class="font-bold text-white bg-black/25 backdrop-blur-sm border border-white/20 px-3 py-1 rounded-lg text-sm shadow-sm">0 Rechazos</span>';
             
             let html = `<div class="mb-5 ${headerColorClass} text-white p-5 rounded-[2rem] shadow-lg flex flex-col gap-3 border border-white/20 relative overflow-hidden">
                 <div class="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>
@@ -1527,7 +2100,6 @@
             return html;
         }
 
-        // --- EXPORTACIÓN A PDF PROFESIONAL ---
         window.openExportModal = function() {
             const m = document.getElementById('export-date-modal');
             document.getElementById('export-date-picker-pdf').value = getLocalDateString();
