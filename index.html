@@ -171,32 +171,43 @@
         </div>
     </div>
 
-    <!-- Modal de Alerta de Borrado para Administradores -->
+    <!-- Modal de Alerta de Borrado para Administradores (Sincronizado en vivo) -->
     <div id="admin-approval-modal" class="fixed inset-0 bg-black/70 backdrop-blur-xl z-[200] hidden flex-col items-center justify-center p-4 fade-in">
         <div class="glass-panel w-full max-w-md rounded-3xl p-6 flex flex-col relative bg-white/95 max-h-[90vh]">
             
             <!-- Vista 1: Lista de Aprobación -->
             <div id="approval-list-view" class="flex flex-col h-full w-full">
-                <div class="flex items-center gap-3 mb-4 border-b border-gray-200 pb-3">
-                    <div class="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center text-amber-600 text-xl flex-shrink-0">
-                        <i class="fas fa-bell"></i>
+                <div class="flex items-start justify-between gap-3 mb-4 border-b border-gray-200 pb-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center text-amber-600 text-xl flex-shrink-0">
+                            <i class="fas fa-bell"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-black text-gray-900">Solicitud de Borrado</h3>
+                            <p class="text-xs text-gray-500 font-medium">Desmarca los que NO quieras borrar</p>
+                        </div>
                     </div>
-                    <div>
-                        <h3 class="text-xl font-black text-gray-900">Solicitud de Borrado</h3>
-                        <p class="text-xs text-gray-500 font-medium">Un inspector solicitó eliminar registros</p>
-                    </div>
+                    <!-- Botón X para saltar la ventana -->
+                    <button onclick="skipCurrentApprovalModal()" class="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition shadow-sm border border-gray-200 flex-shrink-0" title="Saltar por ahora">
+                        <i class="fas fa-times"></i>
+                    </button>
                 </div>
                 
-                <div id="approval-items-container" class="flex-1 overflow-y-auto space-y-2 mb-4 pr-1 max-h-[50vh]">
+                <div id="approval-items-container" class="flex-1 overflow-y-auto space-y-2 mb-4 pr-1 max-h-[48vh]">
                     <!-- Se inyectan los registros pendientes con checkboxes -->
                 </div>
 
-                <div class="flex gap-3 mt-2">
-                    <button onclick="rejectApprovalRequest()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3 rounded-xl transition active:scale-95">
-                        Rechazar
-                    </button>
-                    <button onclick="showApprovalPinView()" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition active:scale-95 shadow-lg text-sm">
-                        Aprobar Selección
+                <div class="flex flex-col gap-2 mt-1">
+                    <div class="flex gap-3">
+                        <button onclick="rejectApprovalRequest()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3 rounded-xl transition active:scale-95 text-sm">
+                            Rechazar Todo
+                        </button>
+                        <button onclick="showApprovalPinView()" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition active:scale-95 shadow-lg text-sm">
+                            Aprobar Selección
+                        </button>
+                    </div>
+                    <button onclick="skipCurrentApprovalModal()" class="w-full py-2 text-xs font-bold text-gray-500 hover:text-gray-800 transition">
+                        Saltar por ahora (Decidir más tarde)
                     </button>
                 </div>
             </div>
@@ -245,7 +256,7 @@
     <!-- LOBBY (Pantalla de Inicio) -->
     <div id="lobby-screen" class="absolute inset-0 z-40 flex flex-col items-center justify-center p-6 fade-in overflow-y-auto">
         
-        <div class="text-center mb-8 mt-4 relative">
+        <div class="text-center mb-6 mt-4 relative">
             <div class="w-24 h-24 glass-panel rounded-3xl flex items-center justify-center text-blue-600 text-4xl mx-auto mb-4 border-2 border-white/70 shadow-lg relative z-10">
                 <i class="fas fa-industry"></i>
             </div>
@@ -254,9 +265,15 @@
         </div>
 
         <!-- Botón de Tendencias OQC (Solo Administradores) -->
-        <a id="btn-oqc-trends-lobby" href="https://cervantesjesse439-jpg.github.io/OQC-TRENDS-/" class="hidden w-full max-w-xs bg-indigo-600 hover:bg-indigo-700 text-white p-3 rounded-2xl shadow-md mb-4 flex items-center justify-center gap-3 transition active:scale-95 border border-indigo-500 font-bold">
+        <a id="btn-oqc-trends-lobby" href="https://cervantesjesse439-jpg.github.io/OQC-TRENDS-/" class="hidden w-full max-w-xs bg-indigo-600 hover:bg-indigo-700 text-white p-3 rounded-2xl shadow-md mb-2.5 flex items-center justify-center gap-3 transition active:scale-95 border border-indigo-500 font-bold">
             <i class="fas fa-chart-line text-lg"></i> Ir a Dashboard OQC Trends
         </a>
+
+        <!-- Botón de Solicitudes Pendientes (Solo Administradores cuando hay solicitudes saltadas) -->
+        <button id="btn-pending-approvals-lobby" onclick="openPendingApprovalsManually()" class="hidden w-full max-w-xs bg-amber-500 hover:bg-amber-600 text-white p-2.5 rounded-2xl shadow-md mb-4 items-center justify-between px-4 transition active:scale-95 border border-amber-400 font-bold text-xs">
+            <span class="flex items-center gap-2"><i class="fas fa-bell animate-bounce"></i> Solicitudes de borrado pendientes</span>
+            <span id="lobby-pending-count" class="bg-white text-amber-700 font-black px-2 py-0.5 rounded-full">1</span>
+        </button>
 
         <h2 class="text-lg font-bold text-gray-800 mb-4 w-full max-w-xs text-left drop-shadow-sm">Selecciona la línea:</h2>
         
@@ -861,7 +878,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, setDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         let firebaseConfig = {
             apiKey: "AIzaSyC6-UX4jsL4nfyprVw1PviZzHwnKbWLipA",
@@ -901,6 +918,12 @@
         let isAdmin = localStorage.getItem('delta_is_admin') === 'true';
         let adminSavedName = localStorage.getItem('delta_admin_name') || '';
         let targetAdminToRemove = null;
+
+        // Estado para sincronización de solicitudes de borrado entre administradores
+        let pendingApprovalsList = [];
+        let skippedApprovalDocIds = new Set();
+        let activeApprovalDocId = null;
+        let activeApprovalItems = [];
 
         const getLocalDateString = () => {
             const now = new Date();
@@ -1013,6 +1036,7 @@
                 btnOqc.classList.remove('flex');
             }
             if (lblBtnAdmin) lblBtnAdmin.textContent = `Admin (${allAdmins.length}/${maxAdminSlots})`;
+            syncApprovalModalState();
         }
 
         function renderAdminModalContent() {
@@ -1309,19 +1333,18 @@
                     }
                 });
 
-                // Listener para solicitudes de borrado (Solo para Administradores)
+                // Listener en tiempo real para solicitudes de borrado (Sincronizado entre todos los Administradores)
                 if (unsubscribeApprovals) unsubscribeApprovals();
                 unsubscribeApprovals = onSnapshot(approvalsRef, (snapshot) => {
-                    if (!isAdmin) return; 
-                    
-                    let foundPending = false;
+                    pendingApprovalsList = [];
                     snapshot.forEach(docSnap => {
                         const data = docSnap.data();
-                        if (data.status === 'pending' && !foundPending) {
-                            foundPending = true;
-                            showApprovalAdminModal(docSnap.id, data);
+                        if (data.status === 'pending') {
+                            pendingApprovalsList.push({ id: docSnap.id, ...data });
                         }
                     });
+                    pendingApprovalsList.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+                    syncApprovalModalState();
                 });
 
             } catch (error) {
@@ -1921,9 +1944,56 @@
             }
         };
 
-        // --- MODALES Y LÓGICA DE APROBACIÓN DE ADMIN ---
-        let activeApprovalDocId = null;
-        let activeApprovalItems = [];
+        // --- MODALES Y LÓGICA DE APROBACIÓN DE ADMIN (SINCRONIZACIÓN EN VIVO Y SALTAR) ---
+        function syncApprovalModalState() {
+            const btnPendingLobby = document.getElementById('btn-pending-approvals-lobby');
+            const countPendingLobby = document.getElementById('lobby-pending-count');
+
+            if (isAdmin && pendingApprovalsList.length > 0) {
+                if (btnPendingLobby) {
+                    btnPendingLobby.classList.remove('hidden');
+                    btnPendingLobby.classList.add('flex');
+                }
+                if (countPendingLobby) countPendingLobby.textContent = pendingApprovalsList.length;
+            } else {
+                if (btnPendingLobby) {
+                    btnPendingLobby.classList.add('hidden');
+                    btnPendingLobby.classList.remove('flex');
+                }
+            }
+
+            const modal = document.getElementById('admin-approval-modal');
+            if (!isAdmin) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                activeApprovalDocId = null;
+                return;
+            }
+
+            // Si había una solicitud abierta en pantalla y otro administrador ya la aprobó o rechazó:
+            if (activeApprovalDocId) {
+                const stillPending = pendingApprovalsList.find(p => p.id === activeApprovalDocId);
+                if (!stillPending) {
+                    // Ya fue resuelta por otro administrador: buscar si hay otra no saltada o cerrar inmediatamente
+                    const nextUnskipped = pendingApprovalsList.find(p => !skippedApprovalDocIds.has(p.id));
+                    if (nextUnskipped) {
+                        showApprovalAdminModal(nextUnskipped.id, nextUnskipped);
+                    } else {
+                        modal.classList.add('hidden');
+                        modal.classList.remove('flex');
+                        activeApprovalDocId = null;
+                        activeApprovalItems = [];
+                    }
+                    return;
+                }
+            } else {
+                // Si el modal está cerrado, mostrar la primera solicitud pendiente que no haya sido saltada
+                const nextUnskipped = pendingApprovalsList.find(p => !skippedApprovalDocIds.has(p.id));
+                if (nextUnskipped) {
+                    showApprovalAdminModal(nextUnskipped.id, nextUnskipped);
+                }
+            }
+        }
 
         function showApprovalAdminModal(docId, data) {
             activeApprovalDocId = docId;
@@ -1950,12 +2020,29 @@
             document.getElementById('admin-approval-modal').classList.add('flex');
         }
 
+        window.skipCurrentApprovalModal = function() {
+            if (activeApprovalDocId) {
+                skippedApprovalDocIds.add(activeApprovalDocId);
+            }
+            activeApprovalDocId = null;
+            activeApprovalItems = [];
+            document.getElementById('admin-approval-modal').classList.add('hidden');
+            document.getElementById('admin-approval-modal').classList.remove('flex');
+            syncApprovalModalState();
+        };
+
+        window.openPendingApprovalsManually = function() {
+            if (pendingApprovalsList.length === 0) return showNotification("No hay solicitudes pendientes.");
+            skippedApprovalDocIds.clear();
+            const first = pendingApprovalsList[0];
+            showApprovalAdminModal(first.id, first);
+        };
+
         window.rejectApprovalRequest = async function() {
             if (!activeApprovalDocId) return;
+            const targetId = activeApprovalDocId;
             try {
-                await setDoc(doc(db, 'delta_approvals', activeApprovalDocId), { status: 'rejected' }, { merge: true });
-                document.getElementById('admin-approval-modal').classList.add('hidden');
-                document.getElementById('admin-approval-modal').classList.remove('flex');
+                await deleteDoc(doc(db, 'delta_approvals', targetId));
                 showNotification("Solicitud de borrado rechazada.");
             } catch(e) { console.error(e); }
         };
@@ -1983,6 +2070,14 @@
             if (pinVal !== CORRECT_PIN) return showNotification("PIN incorrecto.");
             if (!activeApprovalDocId) return;
 
+            const targetApprovalId = activeApprovalDocId;
+            const stillExists = pendingApprovalsList.some(p => p.id === targetApprovalId);
+            if (!stillExists) {
+                showNotification("Esta solicitud ya fue procesada por otro administrador.");
+                syncApprovalModalState();
+                return;
+            }
+
             const checkboxes = document.querySelectorAll('#approval-items-container input[type="checkbox"]');
             const idsToDelete = [];
             checkboxes.forEach(cb => {
@@ -1995,14 +2090,13 @@
             });
 
             try {
+                // Primero eliminamos el documento de solicitud para que desaparezca al instante en los demás dispositivos
+                await deleteDoc(doc(db, 'delta_approvals', targetApprovalId));
+
                 for (const id of idsToDelete) {
                     await deleteDoc(doc(db, 'rechazos_delta', id));
                 }
 
-                await setDoc(doc(db, 'delta_approvals', activeApprovalDocId), { status: 'approved' }, { merge: true });
-                
-                document.getElementById('admin-approval-modal').classList.add('hidden');
-                document.getElementById('admin-approval-modal').classList.remove('flex');
                 showNotification(`¡Se aprobaron y borraron ${idsToDelete.length} registros!`);
             } catch(e) {
                 console.error(e);
