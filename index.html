@@ -357,7 +357,8 @@
                                 <div class="w-12 h-12 bg-white/80 rounded-full flex items-center justify-center shadow-inner border border-gray-100"><i class="fas fa-grip-lines text-2xl text-stone-500"></i></div>
                                 <span class="font-bold text-gray-900 text-sm text-center">Raspón</span>
                             </button>
-                            <button class="option-btn dmg-btn upr-dmg pocket-dmg cover-dmg glass-btn p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 border border-white" onclick="selectOption('damage', 'Rebaba', 3)">
+                            <!-- REBABA - Ahora también en COWL -->
+                            <button class="option-btn dmg-btn upr-dmg cowl-dmg pocket-dmg cover-dmg glass-btn p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 border border-white" onclick="selectOption('damage', 'Rebaba', 3)">
                                 <div class="w-12 h-12 bg-white/80 rounded-full flex items-center justify-center shadow-inner border border-gray-100"><i class="fas fa-cut text-2xl text-orange-500"></i></div>
                                 <span class="font-bold text-gray-900 text-sm text-center">Rebaba</span>
                             </button>
@@ -373,10 +374,13 @@
                                 <div class="w-12 h-12 bg-white/80 rounded-full flex items-center justify-center shadow-inner border border-gray-100"><i class="fas fa-compress text-2xl text-red-500"></i></div>
                                 <span class="font-bold text-gray-900 text-sm text-center">Tiro corto</span>
                             </button>
-                            <button class="option-btn dmg-btn upr-dmg cowl-dmg pocket-dmg glass-btn p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 border border-white" onclick="selectOption('damage', 'Poste fracturado', 3)">
+                            
+                            <!-- FRACTURA (Antes "Poste fracturado") -->
+                            <button class="option-btn dmg-btn upr-dmg cowl-dmg pocket-dmg glass-btn p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 border border-white" onclick="selectOption('damage', 'Fractura', 3)">
                                 <div class="w-12 h-12 bg-white/80 rounded-full flex items-center justify-center shadow-inner border border-gray-100"><i class="fas fa-cube text-2xl text-purple-500"></i></div>
-                                <span class="font-bold text-gray-900 text-sm text-center">Poste fracturado</span>
+                                <span class="font-bold text-gray-900 text-sm text-center">Fractura</span>
                             </button>
+                            
                             <button class="option-btn dmg-btn upr-dmg cowl-dmg pocket-dmg glass-btn p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 border border-white" onclick="selectOption('damage', 'Burbuja', 3)">
                                 <div class="w-12 h-12 bg-white/80 rounded-full flex items-center justify-center shadow-inner border border-gray-100"><i class="fas fa-droplet text-2xl text-blue-500"></i></div>
                                 <span class="font-bold text-gray-900 text-sm text-center">Burbuja</span>
@@ -657,6 +661,14 @@
         </div>
     </div>
 
+    <!-- Visor de Fotos Ampliado (NUEVO) -->
+    <div id="photo-viewer-modal" class="fixed inset-0 bg-black/90 backdrop-blur-xl z-[200] hidden flex-col items-center justify-center fade-in p-4 cursor-pointer" onclick="closePhotoViewer()">
+        <button onclick="closePhotoViewer()" class="absolute top-6 right-6 w-12 h-12 bg-white/20 rounded-full text-white flex items-center justify-center text-2xl hover:bg-white/30 backdrop-blur-md transition active:scale-95 border border-white/20 z-10">
+            <i class="fas fa-times"></i>
+        </button>
+        <img id="photo-viewer-img" src="" class="max-w-full max-h-full object-contain rounded-2xl shadow-2xl" onclick="event.stopPropagation()">
+    </div>
+
     <!-- Modal de Reporte Diario Inteligente -->
     <div id="report-modal" class="fixed inset-0 bg-black/50 backdrop-blur-md z-[55] hidden flex-col justify-end fade-in">
         <div class="glass-panel w-full max-w-md mx-auto rounded-t-[2.5rem] h-[85vh] flex flex-col slide-up relative overflow-hidden bg-white/95">
@@ -731,7 +743,7 @@
         let selectedForDeletion = new Set();
         let currentPiece = null; 
         let cloneQuantityValue = 1;
-        let clonePhotos = []; // Para almacenar las fotos temporales a clonar
+        let clonePhotos = []; 
         
         let inspectorName = '';
         let unsubscribeInspector = null;
@@ -746,15 +758,33 @@
             return new Date(dateString + 'T12:00:00').toLocaleDateString('es-MX', options).replace(/^\w/, c => c.toUpperCase());
         };
 
-        // --- Lógica Principal: MIGRACIÓN DE "SIN ETIQUETA" A "CONTAMINACIÓN" EN COWL ---
+        // --- Lógica Principal: MIGRACIÓN DE DAÑOS EN COWL ---
         const getFilteredRecords = () => {
             return allRecords.filter(r => (r.pieceType || 'UPR') === currentPiece).map(r => {
                 let correctedRecord = { ...r };
+                // Migración 1: Sin etiqueta -> Contaminación (Solo en COWL)
                 if (correctedRecord.pieceType === 'COWL' && correctedRecord.damage === 'Sin etiqueta') {
                     correctedRecord.damage = 'Contaminación';
                 }
+                // Migración 2: Poste fracturado -> Fractura (Global para registros pasados)
+                if (correctedRecord.damage === 'Poste fracturado') {
+                    correctedRecord.damage = 'Fractura';
+                }
                 return correctedRecord;
             });
+        };
+
+        // --- VISOR DE FOTOS AMPLIADO ---
+        window.openPhotoViewer = function(src) {
+            document.getElementById('photo-viewer-img').src = src;
+            document.getElementById('photo-viewer-modal').classList.remove('hidden');
+            document.getElementById('photo-viewer-modal').classList.add('flex');
+        };
+
+        window.closePhotoViewer = function() {
+            document.getElementById('photo-viewer-modal').classList.add('hidden');
+            document.getElementById('photo-viewer-modal').classList.remove('flex');
+            setTimeout(() => document.getElementById('photo-viewer-img').src = '', 300);
         };
 
         // --- SISTEMA DE IDENTIDAD DINÁMICA POR PIEZA ---
@@ -923,7 +953,7 @@
                 document.getElementById('lbl-cantidad-rechazos').textContent = "Piezas Rechazadas";
                 document.getElementById('summary-lbl-cantidad').textContent = "Total Rechazos";
                 document.querySelectorAll('.na-option').forEach(el => el.classList.add('hidden'));
-                btnMain.innerHTML = '<i class="fas fa-pallet text-2xl drop-shadow-sm"></i> Registrar Tarimas';
+                btnMain.innerHTML = '<i class="fas fa-pallet text-2xl drop-shadow-sm"></i> Registrar Tarimas / Rechazo';
             }
 
             updateDashboard();
@@ -1034,7 +1064,7 @@
                             ${variantSpan}
                             <span class="${damageStyle} px-2 py-0.5 rounded-md font-bold truncate max-w-full shadow-sm"><i class="fas ${damageIcon} text-[10px] mr-1"></i>${r.damage}</span>
                         </p>
-                        ${r.photos && r.photos.length > 0 ? `<div class="flex gap-2 mt-3 hide-scrollbar overflow-x-auto pb-1">${r.photos.map(p => `<img src="${p}" class="w-12 h-12 rounded-lg object-cover border border-white shadow-sm">`).join('')}</div>` : ''}
+                        ${r.photos && r.photos.length > 0 ? `<div class="flex gap-2 mt-3 hide-scrollbar overflow-x-auto pb-1">${r.photos.map(p => `<img src="${p}" class="w-12 h-12 rounded-lg object-cover border border-white shadow-sm cursor-pointer active:scale-95" onclick="event.stopPropagation(); openPhotoViewer('${p}')">`).join('')}</div>` : ''}
                     </div>
                 `;
                 container.appendChild(card);
@@ -1049,7 +1079,7 @@
 
             const photoContainer = document.getElementById('details-photos');
             if (r.photos && r.photos.length > 0) {
-                photoContainer.innerHTML = r.photos.map(p => `<img src="${p}" class="w-full max-h-[60vh] object-contain snap-center rounded-2xl bg-black/80 shadow-2xl border border-white/20">`).join('');
+                photoContainer.innerHTML = r.photos.map(p => `<img src="${p}" class="w-full max-h-[60vh] object-contain snap-center rounded-2xl bg-black/80 shadow-2xl border border-white/20 cursor-pointer active:scale-95 transition-transform" onclick="openPhotoViewer('${p}')">`).join('');
                 photoContainer.classList.remove('hidden');
             } else {
                 photoContainer.innerHTML = '<div class="w-full flex flex-col items-center justify-center text-white/50 py-12"><i class="fas fa-image text-5xl mb-3"></i><p class="font-bold">Sin fotografías</p></div>';
@@ -1092,7 +1122,7 @@
             } else {
                 container.innerHTML = clonePhotos.map((p, i) => `
                     <div class="relative w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden border border-gray-200 shadow-sm bg-black">
-                        <img src="${p}" class="w-full h-full object-cover">
+                        <img src="${p}" class="w-full h-full object-cover cursor-pointer" onclick="openPhotoViewer('${p}')">
                         <button onclick="removeClonePhoto(${i})" class="absolute top-0 right-0 bg-red-500 text-white text-[10px] w-5 h-5 rounded-bl shadow flex items-center justify-center active:scale-95"><i class="fas fa-times"></i></button>
                     </div>
                 `).join('');
@@ -1269,7 +1299,7 @@
 
         function renderPhotoPreviews() {
             const c = document.getElementById('photo-preview-container');
-            c.innerHTML = newRecordData.photos.map((p, i) => `<div class="relative w-16 h-16 flex-shrink-0 rounded-xl overflow-hidden border-2 border-white shadow-sm"><img src="${p}" class="w-full h-full object-cover"><button onclick="removePhoto(${i})" class="absolute top-0 right-0 bg-red-500 text-white text-xs w-6 h-6 rounded-bl-lg shadow flex items-center justify-center"><i class="fas fa-times"></i></button></div>`).join('');
+            c.innerHTML = newRecordData.photos.map((p, i) => `<div class="relative w-16 h-16 flex-shrink-0 rounded-xl overflow-hidden border-2 border-white shadow-sm"><img src="${p}" class="w-full h-full object-cover cursor-pointer" onclick="openPhotoViewer('${p}')"><button onclick="removePhoto(${i})" class="absolute top-0 right-0 bg-red-500 text-white text-xs w-6 h-6 rounded-bl-lg shadow flex items-center justify-center"><i class="fas fa-times"></i></button></div>`).join('');
             
             const btnLabel = document.getElementById('btn-foto-label');
             if(btnLabel) {
@@ -1539,6 +1569,9 @@
                     let correctedRecord = { ...r };
                     if (correctedRecord.pieceType === 'COWL' && correctedRecord.damage === 'Sin etiqueta') {
                         correctedRecord.damage = 'Contaminación';
+                    }
+                    if (correctedRecord.damage === 'Poste fracturado') {
+                        correctedRecord.damage = 'Fractura';
                     }
                     return correctedRecord;
                 });
