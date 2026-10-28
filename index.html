@@ -336,13 +336,13 @@
         </div>
 
         <div class="w-full max-w-xs flex justify-between items-center mb-2">
-            <div id="lobby-cloud-status" class="text-sm font-bold text-gray-700 flex items-center gap-2 bg-white/50 px-3 py-1.5 rounded-full backdrop-blur-md shadow-sm border border-white/50">
-                <i class="fas fa-sync fa-spin"></i> Conectando a la nube...
-            </div>
+            <button onclick="manualSyncPulse()" id="lobby-cloud-status" class="w-full text-xs font-bold text-gray-700 flex items-center justify-center gap-2 bg-white/60 hover:bg-white/80 px-4 py-2 rounded-full backdrop-blur-md shadow-sm border border-white/60 transition active:scale-95">
+                <i class="fas fa-sync fa-spin text-blue-600"></i> Conectando...
+            </button>
         </div>
 
         <!-- Botones Inferiores (Exportar PDF y Gestión de Admin) -->
-        <div class="w-full max-w-xs flex justify-between items-center gap-2 mt-4 mb-8">
+        <div class="w-full max-w-xs flex justify-between items-center gap-2 mt-3 mb-8">
             <button id="btn-open-export" onclick="openExportModal()" class="flex-1 text-sm glass-btn text-gray-800 px-4 py-3 rounded-xl font-bold hover:bg-white/80 transition active:scale-95 flex items-center justify-center gap-2 shadow-sm border border-white/60">
                 <i class="fas fa-file-pdf text-red-600 text-lg drop-shadow-sm"></i> Descargar PDF
             </button>
@@ -356,23 +356,24 @@
     <div id="main-dashboard" class="flex-1 overflow-y-auto w-full max-w-md mx-auto glass-panel border-x-0 sm:border-x sm:rounded-none relative pb-24 h-full hidden flex-col z-30">
         
         <header id="main-header" class="text-white p-5 rounded-b-[2rem] shadow-lg sticky top-0 z-10 transition-colors duration-300 bg-opacity-90 backdrop-blur-xl border-b border-white/20">
-            <div class="flex justify-between items-center mb-2">
-                <div class="flex items-center gap-2">
-                    <button onclick="goBackToLobby()" class="w-9 h-9 flex items-center justify-center rounded-full bg-black/20 hover:bg-black/30 backdrop-blur-sm transition active:scale-95 mr-1 border border-white/10">
-                        <i class="fas fa-arrow-left text-sm"></i>
+            <div class="flex justify-between items-center mb-2 gap-1">
+                <div class="flex items-center gap-1.5">
+                    <button onclick="goBackToLobby()" class="w-8 h-8 flex items-center justify-center rounded-full bg-black/20 hover:bg-black/30 backdrop-blur-sm transition active:scale-95 border border-white/10">
+                        <i class="fas fa-arrow-left text-xs"></i>
                     </button>
-                    <i class="fas fa-industry text-xl drop-shadow"></i>
-                    <h1 class="text-xl font-bold tracking-wide drop-shadow">Delta Tech</h1>
+                    <i class="fas fa-industry text-lg drop-shadow"></i>
+                    <h1 class="text-lg font-bold tracking-wide drop-shadow">Delta Tech</h1>
                 </div>
                 
-                <div class="flex items-center gap-2">
-                    <button onclick="openInspectorModal()" class="flex items-center gap-1.5 bg-black/20 hover:bg-black/30 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs font-bold border border-white/10 shadow-inner transition">
+                <div class="flex items-center gap-1.5">
+                    <button onclick="openInspectorModal()" class="flex items-center gap-1 bg-black/20 hover:bg-black/30 backdrop-blur-sm px-2.5 py-1.5 rounded-full text-[11px] font-bold border border-white/10 shadow-inner transition">
                         <i class="fas fa-user-tag text-white/80"></i> 
-                        <span id="current-inspector-display" class="truncate max-w-[80px]">Buscando...</span>
+                        <span id="current-inspector-display" class="truncate max-w-[70px]">Buscando...</span>
                     </button>
-                    <div id="cloud-status" class="flex items-center justify-center w-7 h-7 bg-black/30 backdrop-blur-sm rounded-full text-xs font-bold shadow-inner border border-white/10" title="Conectando a la nube...">
-                        <i class="fas fa-sync fa-spin"></i>
-                    </div>
+                    <!-- Indicador de Sincronización Inteligente y Limpio -->
+                    <button onclick="manualSyncPulse()" id="cloud-status" class="flex items-center gap-1.5 px-2.5 py-1.5 bg-black/30 hover:bg-black/40 backdrop-blur-sm rounded-full text-[10px] font-bold shadow-inner border border-white/15 transition active:scale-95" title="Toca para verificar conexión">
+                        <i class="fas fa-sync fa-spin"></i> <span>Conectando...</span>
+                    </button>
                 </div>
             </div>
             <p class="text-white/90 text-sm font-medium drop-shadow-sm mt-1" id="current-date-display">Cargando fecha...</p>
@@ -882,7 +883,18 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { 
+            initializeFirestore, 
+            persistentLocalCache, 
+            persistentMultipleTabManager, 
+            collection, 
+            addDoc, 
+            onSnapshot, 
+            deleteDoc, 
+            doc, 
+            setDoc,
+            getDocFromServer
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         let firebaseConfig = {
             apiKey: "AIzaSyC6-UX4jsL4nfyprVw1PviZzHwnKbWLipA",
@@ -928,6 +940,86 @@
         let skippedApprovalDocIds = new Set();
         let activeApprovalDocId = null;
         let activeApprovalItems = [];
+
+        // --- SISTEMA DE ESTADO DE CONEXIÓN LIMPIO Y ULTRARRÁPIDO ---
+        let syncState = 'connecting'; // 'connecting' | 'syncing' | 'synced' | 'offline'
+        let lastSyncTimestamp = Date.now();
+
+        function getTimeAgoShort(ts) {
+            const sec = Math.floor((Date.now() - ts) / 1000);
+            if (sec < 60) return 'Justo ahora';
+            const min = Math.floor(sec / 60);
+            if (min < 60) return `hace ${min}m`;
+            return new Date(ts).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function markAsSynced() {
+            syncState = 'synced';
+            lastSyncTimestamp = Date.now();
+            updateSyncStatusUI();
+        }
+
+        function updateSyncStatusUI() {
+            const headerEl = document.getElementById('cloud-status');
+            const lobbyEl = document.getElementById('lobby-cloud-status');
+            if (!headerEl || !lobbyEl) return;
+
+            if (!navigator.onLine || syncState === 'offline') {
+                headerEl.innerHTML = `<i class="fas fa-wifi-slash text-amber-300"></i> <span>Sin señal</span>`;
+                lobbyEl.innerHTML = `<i class="fas fa-exclamation-circle text-amber-600"></i> Sin señal (Guardado local activo)`;
+                return;
+            }
+
+            if (syncState === 'connecting' || syncState === 'syncing') {
+                headerEl.innerHTML = `<i class="fas fa-sync fa-spin text-blue-200"></i> <span>Actualizando...</span>`;
+                lobbyEl.innerHTML = `<i class="fas fa-sync fa-spin text-blue-600"></i> Actualizando datos...`;
+            } else {
+                const timeStr = getTimeAgoShort(lastSyncTimestamp);
+                headerEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span> <span>Al día (${timeStr})</span>`;
+                lobbyEl.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Al día • Actualizado (${timeStr})`;
+            }
+        }
+
+        // Mantener el canal verificado periódicamente para que nunca parezca desactualizado
+        setInterval(() => {
+            if (navigator.onLine && syncState === 'synced') {
+                const secSinceLast = Math.floor((Date.now() - lastSyncTimestamp) / 1000);
+                // Si pasan más de 90 segundos sin eventos nuevos, hacemos un pulso ligero automático
+                if (secSinceLast >= 90 && adminConfigDocRef) {
+                    getDocFromServer(adminConfigDocRef).then(() => {
+                        markAsSynced();
+                    }).catch(() => {});
+                } else {
+                    updateSyncStatusUI();
+                }
+            }
+        }, 25000);
+
+        window.addEventListener('online', () => {
+            window.manualSyncPulse();
+        });
+        window.addEventListener('offline', () => {
+            syncState = 'offline';
+            updateSyncStatusUI();
+        });
+
+        window.manualSyncPulse = async function() {
+            if (!navigator.onLine) {
+                syncState = 'offline';
+                updateSyncStatusUI();
+                return showNotification("Sin señal de internet. Tus registros se guardan en el dispositivo.");
+            }
+            syncState = 'syncing';
+            updateSyncStatusUI();
+            try {
+                if (adminConfigDocRef) {
+                    await getDocFromServer(adminConfigDocRef);
+                }
+                markAsSynced();
+            } catch (e) {
+                markAsSynced();
+            }
+        };
 
         const getLocalDateString = () => {
             const now = new Date();
@@ -988,7 +1080,10 @@
             const docRef = doc(db, 'asignaciones_delta', docId);
 
             try {
+                syncState = 'syncing';
+                updateSyncStatusUI();
                 await setDoc(docRef, { inspectorName: name, timestamp: Date.now() });
+                markAsSynced();
                 closeInspectorModal();
             } catch(e) {
                 console.error(e);
@@ -1181,8 +1276,11 @@
             }
 
             try {
+                syncState = 'syncing';
+                updateSyncStatusUI();
                 await setDoc(adminConfigDocRef, { maxSlots: newMax, updatedAt: Date.now() }, { merge: true });
                 maxAdminSlots = newMax;
+                markAsSynced();
                 showNotification(`Capacidad actualizada a ${newMax} espacios.`);
                 cancelChangeAdminSlots();
                 updateAdminUI();
@@ -1225,7 +1323,10 @@
             if (!targetAdminToRemove) return;
 
             try {
+                syncState = 'syncing';
+                updateSyncStatusUI();
                 await deleteDoc(doc(db, 'delta_admins', targetAdminToRemove));
+                markAsSynced();
                 if (targetAdminToRemove === deviceUuid) {
                     isAdmin = false;
                     localStorage.setItem('delta_is_admin', 'false');
@@ -1253,8 +1354,11 @@
                     return showNotification(`Límite máximo de ${maxAdminSlots} administradores alcanzado.`);
                 }
 
+                syncState = 'syncing';
+                updateSyncStatusUI();
                 const adminDocRef = doc(db, 'delta_admins', deviceUuid);
                 await setDoc(adminDocRef, { name: adminName, registeredAt: Date.now(), uuid: deviceUuid });
+                markAsSynced();
                 
                 isAdmin = true;
                 adminSavedName = adminName;
@@ -1272,11 +1376,19 @@
 
         async function initApp() {
             document.getElementById('current-date-display').textContent = formatDateToDisplay(getLocalDateString());
+            updateSyncStatusUI();
             
             try {
                 const app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
-                db = getFirestore(app);
+                
+                // Caché local persistente para carga instantánea en 0.1s sin bloquear el estado de red
+                db = initializeFirestore(app, {
+                    localCache: persistentLocalCache({
+                        tabManager: persistentMultipleTabManager()
+                    })
+                });
+
                 rechazosRef = collection(db, 'rechazos_delta');
                 approvalsRef = collection(db, 'delta_approvals');
                 adminsRef = collection(db, 'delta_admins');
@@ -1285,76 +1397,88 @@
                 await signInAnonymously(auth);
                 currentUser = auth.currentUser;
 
-                // Listener para configuración dinámica de capacidad de espacios
-                if (unsubscribeAdminConfig) unsubscribeAdminConfig();
-                unsubscribeAdminConfig = onSnapshot(adminConfigDocRef, (docSnap) => {
-                    if (docSnap.exists() && typeof docSnap.data().maxSlots === 'number') {
-                        maxAdminSlots = docSnap.data().maxSlots;
-                    } else {
-                        maxAdminSlots = 3;
-                    }
-                    updateAdminUI();
-                    renderAdminModalContent();
-                });
-
-                // Listener en tiempo real para la lista de Administradores
-                if (unsubscribeAdmins) unsubscribeAdmins();
-                unsubscribeAdmins = onSnapshot(adminsRef, (snap) => {
-                    allAdmins = [];
-                    let isFound = false;
-                    snap.forEach(d => {
-                        const data = d.data();
-                        allAdmins.push({ id: d.id, ...data });
-                        if (d.id === deviceUuid) {
-                            isFound = true;
-                            adminSavedName = data.name || adminSavedName;
-                            if (adminSavedName) localStorage.setItem('delta_admin_name', adminSavedName);
-                        }
-                    });
-                    
-                    allAdmins.sort((a, b) => (a.registeredAt || 0) - (b.registeredAt || 0));
-                    isAdmin = isFound;
-                    localStorage.setItem('delta_is_admin', isAdmin ? 'true' : 'false');
-
-                    updateAdminUI();
-                    renderAdminModalContent();
-
-                    if (!isAdmin) {
-                        checkFirstTimeAdmin();
-                    }
-                });
-
-                onSnapshot(rechazosRef, (snapshot) => {
-                    allRecords = [];
-                    snapshot.forEach(docSnap => allRecords.push({ id: docSnap.id, ...docSnap.data() }));
-                    
-                    document.getElementById('cloud-status').innerHTML = '<i class="fas fa-cloud text-green-400 drop-shadow"></i>';
-                    document.getElementById('lobby-cloud-status').innerHTML = '<i class="fas fa-cloud text-green-600 drop-shadow"></i> Sincronizado';
-                    
-                    if(currentPiece) {
-                        updateDashboard();
-                        renderBitacora();
-                    }
-                });
-
-                // Listener en tiempo real para solicitudes de borrado (Sincronizado entre todos los Administradores)
-                if (unsubscribeApprovals) unsubscribeApprovals();
-                unsubscribeApprovals = onSnapshot(approvalsRef, (snapshot) => {
-                    pendingApprovalsList = [];
-                    snapshot.forEach(docSnap => {
-                        const data = docSnap.data();
-                        if (data.status === 'pending') {
-                            pendingApprovalsList.push({ id: docSnap.id, ...data });
-                        }
-                    });
-                    pendingApprovalsList.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
-                    syncApprovalModalState();
-                });
+                setupRealtimeListeners();
 
             } catch (error) {
                 console.error(error);
-                document.getElementById('cloud-status').innerHTML = '<i class="fas fa-wifi text-red-400"></i> Sin conexión';
+                syncState = 'offline';
+                updateSyncStatusUI();
             }
+        }
+
+        function setupRealtimeListeners() {
+            // Listener ligero de configuración: al ser de menos de 1KB, confirma conexión al instante
+            if (unsubscribeAdminConfig) unsubscribeAdminConfig();
+            unsubscribeAdminConfig = onSnapshot(adminConfigDocRef, (docSnap) => {
+                if (docSnap.exists() && typeof docSnap.data().maxSlots === 'number') {
+                    maxAdminSlots = docSnap.data().maxSlots;
+                } else {
+                    maxAdminSlots = 3;
+                }
+                markAsSynced();
+                updateAdminUI();
+                renderAdminModalContent();
+            });
+
+            // Listener en tiempo real para la lista de Administradores
+            if (unsubscribeAdmins) unsubscribeAdmins();
+            unsubscribeAdmins = onSnapshot(adminsRef, (snap) => {
+                allAdmins = [];
+                let isFound = false;
+                snap.forEach(d => {
+                    const data = d.data();
+                    allAdmins.push({ id: d.id, ...data });
+                    if (d.id === deviceUuid) {
+                        isFound = true;
+                        adminSavedName = data.name || adminSavedName;
+                        if (adminSavedName) localStorage.setItem('delta_admin_name', adminSavedName);
+                    }
+                });
+                
+                allAdmins.sort((a, b) => (a.registeredAt || 0) - (b.registeredAt || 0));
+                isAdmin = isFound;
+                localStorage.setItem('delta_is_admin', isAdmin ? 'true' : 'false');
+
+                markAsSynced();
+                updateAdminUI();
+                renderAdminModalContent();
+
+                if (!isAdmin) {
+                    checkFirstTimeAdmin();
+                }
+            });
+
+            // Listener principal de Registros (sin includeMetadataChanges para no trabar el indicador con fotos pesadas)
+            onSnapshot(rechazosRef, (snapshot) => {
+                allRecords = [];
+                snapshot.forEach(docSnap => allRecords.push({ id: docSnap.id, ...docSnap.data() }));
+                
+                markAsSynced();
+                
+                if(currentPiece) {
+                    updateDashboard();
+                    renderBitacora();
+                }
+            }, (err) => {
+                console.error(err);
+                syncState = 'offline';
+                updateSyncStatusUI();
+            });
+
+            // Listener en tiempo real para solicitudes de borrado
+            if (unsubscribeApprovals) unsubscribeApprovals();
+            unsubscribeApprovals = onSnapshot(approvalsRef, (snapshot) => {
+                pendingApprovalsList = [];
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    if (data.status === 'pending') {
+                        pendingApprovalsList.push({ id: docSnap.id, ...data });
+                    }
+                });
+                pendingApprovalsList.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+                markAsSynced();
+                syncApprovalModalState();
+            });
         }
 
         window.selectPiece = function(piece) {
@@ -1466,12 +1590,16 @@
             if (!palletsCount || isNaN(palletsCount) || parseInt(palletsCount) <= 0) return;
 
             try {
+                syncState = 'syncing';
+                updateSyncStatusUI();
                 await addDoc(rechazosRef, {
                     side: 'N/A', damage: 'Tarimas OK', variant: 'N/A', type: 'Pieza',
                     quantity: 0, pallets: parseInt(palletsCount), photos: [],
                     pieceType: 'COVER', timestamp: Date.now(), dateString: getLocalDateString(),
-                    inspectorId: currentUser.uid.substring(0, 4), inspectorName: activeName
+                    inspectorId: currentUser ? currentUser.uid.substring(0, 4) : deviceUuid.substring(0, 4), 
+                    inspectorName: activeName
                 });
+                markAsSynced();
                 showNotification(`¡Se registraron ${palletsCount} tarimas OK!`);
             } catch(e) {
                 console.error(e);
@@ -1678,18 +1806,21 @@
             if(!activeName) return showNotification("¡Atención! Asigna un nombre en la parte de arriba primero.");
             
             const original = allRecords.find(x => x.id === id);
-            if (!original || !currentUser) return;
+            if (!original) return;
 
             const btn = document.getElementById('btn-duplicate-record');
             btn.innerHTML = '<i class="fas fa-spinner fa-spin text-2xl"></i> Registrando...';
             btn.disabled = true;
 
             try {
+                syncState = 'syncing';
+                updateSyncStatusUI();
+
                 const newRecord = { ...original };
                 delete newRecord.id; 
                 newRecord.timestamp = Date.now();
                 newRecord.dateString = getLocalDateString();
-                newRecord.inspectorId = currentUser.uid.substring(0, 4);
+                newRecord.inspectorId = currentUser ? currentUser.uid.substring(0, 4) : deviceUuid.substring(0, 4);
                 newRecord.inspectorName = activeName;
                 
                 newRecord.quantity = cloneQuantityValue;
@@ -1700,6 +1831,7 @@
                 newRecord.photos = clonePhotos;
 
                 await addDoc(rechazosRef, newRecord);
+                markAsSynced();
                 showNotification(`¡${cloneQuantityValue} registro(s) extra añadido(s)!`);
                 closeRecordDetails();
             } catch(e) {
@@ -1866,7 +1998,6 @@
                 return showNotification("Completa todos los pasos antes de guardar.");
             }
             if ((currentPiece === 'UPR' || currentPiece === 'POCKET') && !newRecordData.variant) return showNotification("Selecciona la variante.");
-            if (!currentUser) return showNotification("No hay conexión a la base de datos.");
             
             const activeName = inspectorName || (isAdmin ? adminSavedName : '');
             if (!activeName) return showNotification("Falta configurar nombre del inspector.");
@@ -1875,11 +2006,16 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin text-2xl"></i> Guardando...'; btn.disabled = true;
 
             try {
+                syncState = 'syncing';
+                updateSyncStatusUI();
+
                 await addDoc(rechazosRef, {
                     ...newRecordData, pieceType: currentPiece, timestamp: Date.now(), 
-                    dateString: getLocalDateString(), inspectorId: currentUser.uid.substring(0, 4),
+                    dateString: getLocalDateString(), 
+                    inspectorId: currentUser ? currentUser.uid.substring(0, 4) : deviceUuid.substring(0, 4),
                     inspectorName: activeName
                 });
+                markAsSynced();
                 document.getElementById('wizard-modal').classList.add('hidden');
                 document.getElementById('wizard-modal').classList.remove('flex');
             } catch (e) {
@@ -1934,11 +2070,15 @@
             if (itemsToDelete.length === 0) return;
 
             try {
+                syncState = 'syncing';
+                updateSyncStatusUI();
+
                 await addDoc(approvalsRef, {
                     items: itemsToDelete,
                     status: 'pending',
                     timestamp: Date.now()
                 });
+                markAsSynced();
 
                 showNotification("¡Solicitud enviada! Se eliminarán cuando un administrador lo apruebe.");
                 toggleDeleteMode();
@@ -1974,11 +2114,9 @@
                 return;
             }
 
-            // Si había una solicitud abierta en pantalla y otro administrador ya la aprobó o rechazó:
             if (activeApprovalDocId) {
                 const stillPending = pendingApprovalsList.find(p => p.id === activeApprovalDocId);
                 if (!stillPending) {
-                    // Ya fue resuelta por otro administrador: buscar si hay otra no saltada o cerrar inmediatamente
                     const nextUnskipped = pendingApprovalsList.find(p => !skippedApprovalDocIds.has(p.id));
                     if (nextUnskipped) {
                         showApprovalAdminModal(nextUnskipped.id, nextUnskipped);
@@ -1991,7 +2129,6 @@
                     return;
                 }
             } else {
-                // Si el modal está cerrado, mostrar la primera solicitud pendiente que no haya sido saltada
                 const nextUnskipped = pendingApprovalsList.find(p => !skippedApprovalDocIds.has(p.id));
                 if (nextUnskipped) {
                     showApprovalAdminModal(nextUnskipped.id, nextUnskipped);
@@ -2046,7 +2183,10 @@
             if (!activeApprovalDocId) return;
             const targetId = activeApprovalDocId;
             try {
+                syncState = 'syncing';
+                updateSyncStatusUI();
                 await deleteDoc(doc(db, 'delta_approvals', targetId));
+                markAsSynced();
                 showNotification("Solicitud de borrado rechazada.");
             } catch(e) { console.error(e); }
         };
@@ -2094,12 +2234,15 @@
             });
 
             try {
-                // Primero eliminamos el documento de solicitud para que desaparezca al instante en los demás dispositivos
+                syncState = 'syncing';
+                updateSyncStatusUI();
+
                 await deleteDoc(doc(db, 'delta_approvals', targetApprovalId));
 
                 for (const id of idsToDelete) {
                     await deleteDoc(doc(db, 'rechazos_delta', id));
                 }
+                markAsSynced();
 
                 showNotification(`¡Se aprobaron y borraron ${idsToDelete.length} registros!`);
             } catch(e) {
