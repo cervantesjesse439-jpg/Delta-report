@@ -55,6 +55,13 @@
             transform: scale(0.97);
             box-shadow: 0 4px 15px rgba(59, 130, 246, 0.2);
         }
+        .sync-flash {
+            animation: syncFlash 1s ease-out;
+        }
+        @keyframes syncFlash {
+            0% { background-color: rgba(16, 185, 129, 0.6); box-shadow: 0 0 10px rgba(16, 185, 129, 0.8); }
+            100% { background-color: rgba(0, 0, 0, 0.3); box-shadow: none; }
+        }
     </style>
 </head>
 <body class="text-gray-800 antialiased h-screen flex flex-col overflow-hidden relative">
@@ -80,21 +87,19 @@
         </div>
     </div>
 
-    <!-- Modal de Gestión y Registro de Administradores (Espacios Dinámicos) -->
+    <!-- Modal de Gestión y Registro de Administradores -->
     <div id="pin-modal" class="fixed inset-0 bg-black/60 backdrop-blur-md z-[160] hidden flex-col items-center justify-center p-4 fade-in">
         <div class="glass-panel w-full max-w-sm rounded-3xl p-6 flex flex-col items-center relative bg-white/95 max-h-[90vh] overflow-y-auto">
             <button onclick="closePinModal()" class="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition shadow-sm border border-gray-200">
                 <i class="fas fa-times"></i>
             </button>
             
-            <!-- Vista Principal: Lista de Admins + Controles de Capacidad + Formulario de Registro -->
             <div id="admin-main-view" class="w-full flex flex-col items-center">
                 <div class="w-14 h-14 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 text-2xl mb-3 shadow-sm border border-indigo-200">
                     <i class="fas fa-users-cog"></i>
                 </div>
                 <h3 class="text-xl font-black text-gray-900 mb-2">Administradores</h3>
                 
-                <!-- Control de Espacios (+ / -) -->
                 <div class="flex items-center gap-3 mb-4 bg-gray-100/90 px-3.5 py-1.5 rounded-2xl border border-gray-200 shadow-inner">
                     <span class="text-gray-600 text-xs font-medium">Espacios: <span id="admin-slots-count" class="font-black text-indigo-600">0 / 3</span></span>
                     <div class="flex items-center gap-1.5 border-l border-gray-300 pl-2.5">
@@ -107,12 +112,8 @@
                     </div>
                 </div>
                 
-                <!-- Lista de los espacios -->
-                <div id="admin-slots-list" class="w-full space-y-2 mb-5 max-h-[32vh] overflow-y-auto pr-1">
-                    <!-- Se inyectan dinámicamente -->
-                </div>
+                <div id="admin-slots-list" class="w-full space-y-2 mb-5 max-h-[32vh] overflow-y-auto pr-1"></div>
 
-                <!-- Sección para registrarse (Solo visible si este dispositivo NO es admin y hay lugar) -->
                 <div id="admin-register-section" class="w-full border-t border-gray-200 pt-4 flex flex-col items-center">
                     <h4 class="text-sm font-bold text-gray-800 mb-3">Registrar este dispositivo</h4>
                     <input type="text" id="admin-name-input" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-2.5 mb-2.5 text-sm text-gray-800 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-400 shadow-inner" placeholder="Tu Nombre (Ej. Ing. López)">
@@ -122,13 +123,11 @@
                     </button>
                 </div>
 
-                <!-- Mensaje cuando todos los lugares están llenos y no eres admin -->
                 <div id="admin-full-msg" class="w-full border-t border-gray-200 pt-3 hidden text-center">
                     <p class="text-xs text-amber-700 bg-amber-50 border border-amber-200 p-2.5 rounded-xl font-semibold"><i class="fas fa-info-circle mr-1"></i> Todos los espacios están ocupados. Elimina un dispositivo o agrega más espacios con el botón (+).</p>
                 </div>
             </div>
 
-            <!-- Vista Secundaria: Confirmar PIN para eliminar a un Admin -->
             <div id="admin-delete-confirm-view" class="w-full hidden flex-col items-center text-center py-2">
                 <div class="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center text-red-600 text-2xl mb-3 shadow-inner">
                     <i class="fas fa-user-times"></i>
@@ -148,7 +147,6 @@
                 </div>
             </div>
 
-            <!-- Vista Terciaria: Confirmar PIN para Agregar o Restar Espacios -->
             <div id="admin-slots-confirm-view" class="w-full hidden flex-col items-center text-center py-2">
                 <div class="w-14 h-14 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 text-2xl mb-3 shadow-inner">
                     <i class="fas fa-sliders-h"></i>
@@ -171,11 +169,10 @@
         </div>
     </div>
 
-    <!-- Modal de Alerta de Borrado para Administradores (Sincronizado en vivo) -->
+    <!-- Modal de Alerta de Borrado para Administradores -->
     <div id="admin-approval-modal" class="fixed inset-0 bg-black/70 backdrop-blur-xl z-[200] hidden flex-col items-center justify-center p-4 fade-in">
         <div class="glass-panel w-full max-w-md rounded-3xl p-6 flex flex-col relative bg-white/95 max-h-[90vh]">
             
-            <!-- Vista 1: Lista de Aprobación -->
             <div id="approval-list-view" class="flex flex-col h-full w-full">
                 <div class="flex items-start justify-between gap-3 mb-4 border-b border-gray-200 pb-3">
                     <div class="flex items-center gap-3">
@@ -187,15 +184,12 @@
                             <p class="text-xs text-gray-500 font-medium">Desmarca los que NO quieras borrar</p>
                         </div>
                     </div>
-                    <!-- Botón X para saltar la ventana -->
                     <button onclick="skipCurrentApprovalModal()" class="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition shadow-sm border border-gray-200 flex-shrink-0" title="Saltar por ahora">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 
-                <div id="approval-items-container" class="flex-1 overflow-y-auto space-y-2 mb-4 pr-1 max-h-[48vh]">
-                    <!-- Se inyectan los registros pendientes con checkboxes -->
-                </div>
+                <div id="approval-items-container" class="flex-1 overflow-y-auto space-y-2 mb-4 pr-1 max-h-[48vh]"></div>
 
                 <div class="flex flex-col gap-2 mt-1">
                     <div class="flex gap-3">
@@ -212,7 +206,6 @@
                 </div>
             </div>
 
-            <!-- Vista 2: Confirmación de PIN (Seguridad) -->
             <div id="approval-pin-view" class="hidden flex-col items-center w-full py-4 text-center">
                 <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center text-red-600 text-3xl mb-4 shadow-inner">
                     <i class="fas fa-shield-halved"></i>
@@ -235,7 +228,7 @@
         </div>
     </div>
 
-    <!-- Modal de Identidad del Inspector (Dinámico por línea) -->
+    <!-- Modal de Identidad del Inspector -->
     <div id="inspector-name-modal" class="fixed inset-0 bg-black/40 backdrop-blur-md z-[100] hidden flex-col items-center justify-center p-6 fade-in">
         <div class="glass-panel w-full max-w-sm rounded-3xl p-8 flex flex-col items-center text-center relative">
             <button onclick="closeInspectorModal()" class="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/50 text-gray-600 hover:bg-white transition shadow-sm border border-white">
@@ -264,12 +257,10 @@
             <p class="text-gray-700 font-medium mt-1 tracking-wide uppercase text-sm relative z-10">Control de Calidad</p>
         </div>
 
-        <!-- Botón de Tendencias OQC (Solo Administradores) -->
         <a id="btn-oqc-trends-lobby" href="https://cervantesjesse439-jpg.github.io/OQC-TRENDS-/" class="hidden w-full max-w-xs bg-indigo-600 hover:bg-indigo-700 text-white p-3 rounded-2xl shadow-md mb-2.5 flex items-center justify-center gap-3 transition active:scale-95 border border-indigo-500 font-bold">
             <i class="fas fa-chart-line text-lg"></i> Ir a Dashboard OQC Trends
         </a>
 
-        <!-- Botón de Solicitudes Pendientes (Solo Administradores cuando hay solicitudes saltadas) -->
         <button id="btn-pending-approvals-lobby" onclick="openPendingApprovalsManually()" class="hidden w-full max-w-xs bg-amber-500 hover:bg-amber-600 text-white p-2.5 rounded-2xl shadow-md mb-4 items-center justify-between px-4 transition active:scale-95 border border-amber-400 font-bold text-xs">
             <span class="flex items-center gap-2"><i class="fas fa-bell animate-bounce"></i> Solicitudes de borrado pendientes</span>
             <span id="lobby-pending-count" class="bg-white text-amber-700 font-black px-2 py-0.5 rounded-full">1</span>
@@ -278,7 +269,6 @@
         <h2 class="text-lg font-bold text-gray-800 mb-4 w-full max-w-xs text-left drop-shadow-sm">Selecciona la línea:</h2>
         
         <div class="flex flex-col gap-3 w-full max-w-xs pb-6">
-            <!-- Pieza UPR -->
             <button onclick="selectPiece('UPR')" class="glass-btn p-5 rounded-2xl flex items-center justify-between group shadow-sm">
                 <div class="flex items-center gap-4">
                     <div class="w-12 h-12 rounded-full bg-white/80 flex items-center justify-center text-blue-600 text-2xl shadow-inner border border-white">
@@ -292,7 +282,6 @@
                 <i class="fas fa-chevron-right text-gray-400 group-hover:text-blue-600 transition"></i>
             </button>
 
-            <!-- Pieza COWL -->
             <button onclick="selectPiece('COWL')" class="glass-btn p-5 rounded-2xl flex items-center justify-between group shadow-sm">
                 <div class="flex items-center gap-4">
                     <div class="w-12 h-12 rounded-full bg-white/80 flex items-center justify-center text-indigo-600 text-2xl shadow-inner border border-white">
@@ -306,7 +295,6 @@
                 <i class="fas fa-chevron-right text-gray-400 group-hover:text-indigo-600 transition"></i>
             </button>
 
-            <!-- Pieza POCKET -->
             <button onclick="selectPiece('POCKET')" class="glass-btn p-5 rounded-2xl flex items-center justify-between group shadow-sm">
                 <div class="flex items-center gap-4">
                     <div class="w-12 h-12 rounded-full bg-white/80 flex items-center justify-center text-teal-600 text-2xl shadow-inner border border-white">
@@ -320,7 +308,6 @@
                 <i class="fas fa-chevron-right text-gray-400 group-hover:text-teal-600 transition"></i>
             </button>
 
-            <!-- Pieza COVER -->
             <button onclick="selectPiece('COVER')" class="glass-btn p-5 rounded-2xl flex items-center justify-between group shadow-sm">
                 <div class="flex items-center gap-4">
                     <div class="w-12 h-12 rounded-full bg-white/80 flex items-center justify-center text-emerald-600 text-2xl shadow-inner border border-white">
@@ -341,7 +328,6 @@
             </button>
         </div>
 
-        <!-- Botones Inferiores (Exportar PDF y Gestión de Admin) -->
         <div class="w-full max-w-xs flex justify-between items-center gap-2 mt-3 mb-8">
             <button id="btn-open-export" onclick="openExportModal()" class="flex-1 text-sm glass-btn text-gray-800 px-4 py-3 rounded-xl font-bold hover:bg-white/80 transition active:scale-95 flex items-center justify-center gap-2 shadow-sm border border-white/60">
                 <i class="fas fa-file-pdf text-red-600 text-lg drop-shadow-sm"></i> Descargar PDF
@@ -370,8 +356,7 @@
                         <i class="fas fa-user-tag text-white/80"></i> 
                         <span id="current-inspector-display" class="truncate max-w-[70px]">Buscando...</span>
                     </button>
-                    <!-- Indicador de Sincronización Inteligente y Limpio -->
-                    <button onclick="manualSyncPulse()" id="cloud-status" class="flex items-center gap-1.5 px-2.5 py-1.5 bg-black/30 hover:bg-black/40 backdrop-blur-sm rounded-full text-[10px] font-bold shadow-inner border border-white/15 transition active:scale-95" title="Toca para verificar conexión">
+                    <button onclick="manualSyncPulse()" id="cloud-status" class="flex items-center gap-1.5 px-2.5 py-1.5 bg-black/30 hover:bg-black/40 backdrop-blur-sm rounded-full text-[10px] font-bold shadow-inner border border-white/15 transition active:scale-95" title="Sincronización en tiempo real">
                         <i class="fas fa-sync fa-spin"></i> <span>Conectando...</span>
                     </button>
                 </div>
@@ -389,7 +374,6 @@
             </div>
             
             <div class="grid grid-cols-2 gap-3 mb-8" id="dashboard-stats-container">
-                <!-- Tarjetas de Estadísticas -->
                 <div id="stat-card-piezas" onclick="openReportModal()" class="glass-btn p-4 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden cursor-pointer active:scale-95 border border-white">
                     <div class="absolute top-0 w-full h-1.5 bg-red-400 opacity-80"></div>
                     <i class="fas fa-puzzle-piece text-red-500 text-2xl mb-2 drop-shadow-sm"></i>
@@ -446,9 +430,7 @@
                 </div>
             </div>
             
-            <div id="bitacora-list" class="space-y-3 pb-8">
-                <!-- Registros -->
-            </div>
+            <div id="bitacora-list" class="space-y-3 pb-8"></div>
         </main>
     </div>
 
@@ -475,7 +457,14 @@
         <button onclick="closePhotoViewer()" class="absolute top-6 right-6 w-12 h-12 bg-white/20 rounded-full text-white flex items-center justify-center text-2xl hover:bg-white/30 backdrop-blur-md transition active:scale-95 border border-white/20 z-10">
             <i class="fas fa-times"></i>
         </button>
-        <img id="photo-viewer-img" src="" class="max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl" onclick="event.stopPropagation()">
+        
+        <div id="photo-viewer-loader" class="absolute inset-0 flex items-center justify-center hidden pointer-events-none z-20">
+            <div class="bg-black/70 text-white px-5 py-3 rounded-xl backdrop-blur-md flex items-center gap-3 font-bold text-sm shadow-2xl border border-white/10">
+                <i class="fas fa-spinner fa-spin text-xl text-blue-400"></i> Ensamblando imagen en alta calidad...
+            </div>
+        </div>
+
+        <img id="photo-viewer-img" src="" class="max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl transition-opacity duration-300" onclick="event.stopPropagation()">
     </div>
 
     <!-- WIZARD MODAL (Registro) -->
@@ -523,7 +512,6 @@
                         <h4 class="text-2xl font-black mb-6 text-gray-900 text-center flex-shrink-0 drop-shadow-sm">Tipo de Daño</h4>
                         <div class="grid grid-cols-2 gap-3 w-full pb-8">
                             
-                            <!-- Daños base -->
                             <button class="option-btn dmg-btn upr-dmg cowl-dmg pocket-dmg glass-btn p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 border border-white" onclick="selectOption('damage', 'Ráfaga', 3)">
                                 <div class="w-12 h-12 bg-white/80 rounded-full flex items-center justify-center shadow-inner border border-gray-100"><i class="fas fa-wind text-2xl text-blue-500"></i></div>
                                 <span class="font-bold text-gray-900 text-sm text-center">Ráfaga</span>
@@ -565,13 +553,11 @@
                                 <span class="font-bold text-gray-900 text-sm text-center">Burbuja</span>
                             </button>
                             
-                            <!-- Sin Etiqueta GLOBAL (Oculto en COWL) -->
                             <button class="option-btn dmg-btn upr-dmg pocket-dmg cover-dmg glass-btn p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 border border-white" onclick="selectOption('damage', 'Sin etiqueta', 3)">
                                 <div class="w-12 h-12 bg-white/80 rounded-full flex items-center justify-center shadow-inner border border-gray-100"><i class="fas fa-tag text-2xl text-orange-600"></i></div>
                                 <span class="font-bold text-gray-900 text-sm text-center">Sin etiqueta</span>
                             </button>
                             
-                            <!-- Exclusivos UPR -->
                             <button class="option-btn dmg-btn upr-dmg glass-btn p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 border border-white" onclick="selectOption('damage', 'Exceso de brillo', 3)">
                                 <div class="w-12 h-12 bg-white/80 rounded-full flex items-center justify-center shadow-inner border border-gray-100"><i class="fas fa-sun text-2xl text-yellow-500"></i></div>
                                 <span class="font-bold text-gray-900 text-sm text-center">Exceso de brillo</span>
@@ -585,7 +571,6 @@
                                 <span class="font-bold text-gray-900 text-sm text-center">Traspaso de soldadura</span>
                             </button>
 
-                            <!-- Exclusivos COWL -->
                             <button class="option-btn dmg-btn cowl-dmg glass-btn p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 border border-white" onclick="selectOption('damage', 'Tornillo', 3)">
                                 <div class="w-12 h-12 bg-white/80 rounded-full flex items-center justify-center shadow-inner border border-gray-100"><i class="fas fa-screw text-2xl text-gray-700"></i></div>
                                 <span class="font-bold text-gray-900 text-sm text-center">Tornillo</span>
@@ -599,7 +584,6 @@
                                 <span class="font-bold text-gray-900 text-sm text-center">Marca de molde</span>
                             </button>
 
-                            <!-- Exclusivos COVER -->
                             <button class="option-btn dmg-btn cover-dmg glass-btn p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 border border-white" onclick="selectOption('damage', 'Sin componentes', 3)">
                                 <div class="w-12 h-12 bg-white/80 rounded-full flex items-center justify-center shadow-inner border border-gray-100"><i class="fas fa-box-open text-2xl text-red-500"></i></div>
                                 <span class="font-bold text-gray-900 text-sm text-center">Sin componentes</span>
@@ -732,8 +716,8 @@
                             <span class="block text-sm font-black text-gray-700 mb-4 text-center uppercase tracking-widest">Evidencia (Opcional)</span>
                             <label id="btn-foto-label" for="camera-input" class="w-full py-6 bg-white/50 border-2 border-dashed border-gray-400/50 rounded-2xl flex flex-col items-center justify-center gap-2 text-gray-600 cursor-pointer hover:bg-white/70 transition shadow-inner">
                                 <i class="fas fa-camera text-3xl mb-1 text-gray-500"></i>
-                                <span class="text-sm font-bold tracking-wide">Añadir foto</span>
-                                <input type="file" id="camera-input" accept="image/*" class="hidden" onchange="handlePhotos(event)">
+                                <span class="text-sm font-bold tracking-wide">Añadir fotos</span>
+                                <input type="file" id="camera-input" accept="image/*" multiple class="hidden" onchange="handlePhotos(event)">
                             </label>
                             <div id="photo-preview-container" class="flex gap-3 mt-4 overflow-x-auto w-full max-w-full pb-2 hide-scrollbar"></div>
                         </div>
@@ -811,7 +795,7 @@
                     <div id="clone-photo-preview" class="flex gap-2 overflow-x-auto hide-scrollbar flex-1"></div>
                     <label class="w-10 h-10 flex-shrink-0 bg-white border border-gray-300 rounded-xl flex items-center justify-center text-gray-600 cursor-pointer hover:bg-gray-50 shadow-sm transition">
                         <i class="fas fa-camera"></i>
-                        <input type="file" accept="image/*" class="hidden" onchange="handleClonePhotos(event)">
+                        <input type="file" accept="image/*" multiple class="hidden" onchange="handleClonePhotos(event)">
                     </label>
                 </div>
             </div>
@@ -893,7 +877,10 @@
             deleteDoc, 
             doc, 
             setDoc,
-            getDocFromServer
+            getDocFromServer,
+            query, 
+            where, 
+            getDocs
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         let firebaseConfig = {
@@ -906,13 +893,48 @@
             measurementId: "G-0QY5CJP0ED"
         };
 
+        const dbName = "DeltaTechImagesDB";
+        let localDB;
+        const initLocalDB = () => {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(dbName, 1);
+                request.onupgradeneeded = (e) => {
+                    localDB = e.target.result;
+                    if (!localDB.objectStoreNames.contains('images')) {
+                        localDB.createObjectStore('images', { keyPath: 'id' });
+                    }
+                };
+                request.onsuccess = (e) => { localDB = e.target.result; resolve(); };
+                request.onerror = (e) => { console.error("Error IndexedDB", e); reject(e); };
+            });
+        };
+        const saveImageLocally = (id, data) => {
+            if(!localDB) return;
+            try {
+                const tx = localDB.transaction('images', 'readwrite');
+                tx.objectStore('images').put({ id, data });
+            } catch(e) { console.error("Error guardando imagen en cache", e); }
+        };
+        const getImageLocally = (id) => {
+            return new Promise((resolve) => {
+                if(!localDB) return resolve(null);
+                try {
+                    const tx = localDB.transaction('images', 'readonly');
+                    const req = tx.objectStore('images').get(id);
+                    req.onsuccess = () => resolve(req.result ? req.result.data : null);
+                    req.onerror = () => resolve(null);
+                } catch(e) { resolve(null); }
+            });
+        };
+        initLocalDB();
+
         let allRecords = [];
         let allAdmins = [];
         let maxAdminSlots = 3;
         let pendingSlotChangeDelta = 0;
 
         let newRecordData = { side: null, damage: null, variant: null, type: null, quantity: 1, pallets: 1, photos: [] };
-        let db, auth, currentUser, rechazosRef, approvalsRef, adminsRef, adminConfigDocRef;
+        let db, auth, currentUser, rechazosRef, approvalsRef, adminsRef, adminConfigDocRef, chunksRef;
         let isDeleteMode = false;
         let selectedForDeletion = new Set();
         let currentPiece = null; 
@@ -935,21 +957,15 @@
         let adminSavedName = localStorage.getItem('delta_admin_name') || '';
         let targetAdminToRemove = null;
 
-        // Estado para sincronización de solicitudes de borrado entre administradores
         let pendingApprovalsList = [];
         let skippedApprovalDocIds = new Set();
         let activeApprovalDocId = null;
         let activeApprovalItems = [];
 
-        // --- SISTEMA DE ESTADO DE CONEXIÓN LIMPIO Y ULTRARRÁPIDO ---
-        let syncState = 'connecting'; // 'connecting' | 'syncing' | 'synced' | 'offline'
+        let syncState = 'connecting'; 
         let lastSyncTimestamp = Date.now();
 
-        function getTimeAgoShort(ts) {
-            const sec = Math.floor((Date.now() - ts) / 1000);
-            if (sec < 60) return 'Justo ahora';
-            const min = Math.floor(sec / 60);
-            if (min < 60) return `hace ${min}m`;
+        function formatTimeShort(ts) {
             return new Date(ts).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
         }
 
@@ -957,6 +973,13 @@
             syncState = 'synced';
             lastSyncTimestamp = Date.now();
             updateSyncStatusUI();
+            
+            // Efecto visual de flash para mostrar que se actualizó en tiempo real
+            const headerEl = document.getElementById('cloud-status');
+            if (headerEl && currentPiece) {
+                headerEl.classList.add('sync-flash');
+                setTimeout(() => headerEl.classList.remove('sync-flash'), 1000);
+            }
         }
 
         function updateSyncStatusUI() {
@@ -974,51 +997,32 @@
                 headerEl.innerHTML = `<i class="fas fa-sync fa-spin text-blue-200"></i> <span>Actualizando...</span>`;
                 lobbyEl.innerHTML = `<i class="fas fa-sync fa-spin text-blue-600"></i> Actualizando datos...`;
             } else {
-                const timeStr = getTimeAgoShort(lastSyncTimestamp);
-                headerEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span> <span>Al día (${timeStr})</span>`;
-                lobbyEl.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Al día • Actualizado (${timeStr})`;
+                const timeStr = formatTimeShort(lastSyncTimestamp);
+                headerEl.innerHTML = `<i class="fas fa-check-circle text-emerald-400"></i> <span>Sincronizado: ${timeStr}</span>`;
+                lobbyEl.innerHTML = `<i class="fas fa-check-circle text-emerald-500"></i> Actualizado automáticamente: ${timeStr}`;
             }
         }
 
-        // Mantener el canal verificado periódicamente para que nunca parezca desactualizado
+        // Revisar cada 10 segundos la UI por si se debe actualizar el status
         setInterval(() => {
             if (navigator.onLine && syncState === 'synced') {
-                const secSinceLast = Math.floor((Date.now() - lastSyncTimestamp) / 1000);
-                // Si pasan más de 90 segundos sin eventos nuevos, hacemos un pulso ligero automático
-                if (secSinceLast >= 90 && adminConfigDocRef) {
-                    getDocFromServer(adminConfigDocRef).then(() => {
-                        markAsSynced();
-                    }).catch(() => {});
-                } else {
-                    updateSyncStatusUI();
-                }
+                updateSyncStatusUI();
             }
-        }, 25000);
+        }, 10000);
 
-        window.addEventListener('online', () => {
-            window.manualSyncPulse();
-        });
-        window.addEventListener('offline', () => {
-            syncState = 'offline';
-            updateSyncStatusUI();
-        });
+        window.addEventListener('online', () => { window.manualSyncPulse(); });
+        window.addEventListener('offline', () => { syncState = 'offline'; updateSyncStatusUI(); });
 
         window.manualSyncPulse = async function() {
             if (!navigator.onLine) {
-                syncState = 'offline';
-                updateSyncStatusUI();
+                syncState = 'offline'; updateSyncStatusUI();
                 return showNotification("Sin señal de internet. Tus registros se guardan en el dispositivo.");
             }
-            syncState = 'syncing';
-            updateSyncStatusUI();
+            syncState = 'syncing'; updateSyncStatusUI();
             try {
-                if (adminConfigDocRef) {
-                    await getDocFromServer(adminConfigDocRef);
-                }
+                if (adminConfigDocRef) await getDocFromServer(adminConfigDocRef);
                 markAsSynced();
-            } catch (e) {
-                markAsSynced();
-            }
+            } catch (e) { markAsSynced(); }
         };
 
         const getLocalDateString = () => {
@@ -1037,18 +1041,66 @@
                 if (correctedRecord.pieceType === 'COWL' && correctedRecord.damage === 'Sin etiqueta') {
                     correctedRecord.damage = 'Contaminación';
                 }
-                if (correctedRecord.damage === 'Poste fracturado') {
-                    correctedRecord.damage = 'Fractura';
-                }
+                if (correctedRecord.damage === 'Poste fracturado') correctedRecord.damage = 'Fractura';
                 return correctedRecord;
             });
         };
 
-        // --- VISOR DE FOTOS PANTALLA COMPLETA ---
-        window.openPhotoViewer = function(src) {
-            document.getElementById('photo-viewer-img').src = src;
-            document.getElementById('photo-viewer-modal').classList.remove('hidden');
-            document.getElementById('photo-viewer-modal').classList.add('flex');
+        window.openPhotoViewer = async function(id, fallbackThumb) {
+            const viewerModal = document.getElementById('photo-viewer-modal');
+            const viewerImg = document.getElementById('photo-viewer-img');
+            const loader = document.getElementById('photo-viewer-loader');
+            
+            if (id && id.startsWith('data:image')) {
+                viewerImg.src = id;
+                viewerImg.classList.remove('opacity-0');
+                viewerModal.classList.remove('hidden'); viewerModal.classList.add('flex');
+                return;
+            }
+
+            viewerImg.src = fallbackThumb || ''; 
+            viewerImg.classList.add('opacity-50');
+            viewerModal.classList.remove('hidden'); viewerModal.classList.add('flex');
+            
+            let fullB64 = await getImageLocally(id);
+            if (fullB64) {
+                viewerImg.src = fullB64;
+                viewerImg.classList.remove('opacity-50');
+                return;
+            }
+
+            if(!navigator.onLine) {
+                showNotification("Sin internet. Mostrando vista previa.");
+                viewerImg.classList.remove('opacity-50');
+                return;
+            }
+
+            loader.classList.remove('hidden');
+            try {
+                const q = query(chunksRef, where("imageId", "==", id));
+                const querySnapshot = await getDocs(q);
+                
+                let chunks = [];
+                querySnapshot.forEach((doc) => { chunks.push(doc.data()); });
+                
+                if(chunks.length > 0) {
+                    chunks.sort((a, b) => a.chunkIndex - b.chunkIndex);
+                    fullB64 = chunks.map(c => c.data).join('');
+                    
+                    if (fullB64) {
+                        viewerImg.src = fullB64;
+                        saveImageLocally(id, fullB64);
+                    }
+                } else if (!fallbackThumb) {
+                    showNotification("La imagen completa aún no se sincroniza.");
+                }
+            } catch(e) {
+                console.error("Error cargando foto completa", e);
+                showNotification("Error al descargar la foto en alta calidad.");
+            } finally {
+                loader.classList.add('hidden');
+                viewerImg.classList.remove('opacity-50');
+            }
         };
 
         window.closePhotoViewer = function() {
@@ -1057,7 +1109,6 @@
             setTimeout(() => document.getElementById('photo-viewer-img').src = '', 300);
         };
 
-        // --- SISTEMA DE IDENTIDAD DE INSPECTOR ---
         window.openInspectorModal = function() {
             document.getElementById('inspector-name-input').value = localStorage.getItem('delta_last_name') || '';
             document.getElementById('inspector-modal-desc').textContent = `Ingresa tu nombre para ser el inspector oficial de ${currentPiece} hoy.`;
@@ -1080,27 +1131,20 @@
             const docRef = doc(db, 'asignaciones_delta', docId);
 
             try {
-                syncState = 'syncing';
-                updateSyncStatusUI();
+                syncState = 'syncing'; updateSyncStatusUI();
                 await setDoc(docRef, { inspectorName: name, timestamp: Date.now() });
                 markAsSynced();
                 closeInspectorModal();
-            } catch(e) {
-                console.error(e);
-                showNotification("Error al guardar el inspector en la nube.");
-            }
+            } catch(e) { console.error(e); showNotification("Error al guardar el inspector."); }
         };
 
         async function checkDailyInspector() {
             if (unsubscribeInspector) unsubscribeInspector();
-            
             const docId = `${getLocalDateString()}_${currentPiece}`;
             const docRef = doc(db, 'asignaciones_delta', docId);
-
             unsubscribeInspector = onSnapshot(docRef, (docSnap) => {
                 if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    inspectorName = data.inspectorName;
+                    inspectorName = docSnap.data().inspectorName;
                     document.getElementById('current-inspector-display').textContent = inspectorName;
                 } else {
                     if (isAdmin && adminSavedName) {
@@ -1115,7 +1159,6 @@
             });
         }
 
-        // --- SISTEMA DE ONBOARDING Y CENTRO DE GESTIÓN DE ADMINISTRADORES ---
         function checkFirstTimeAdmin() {
             const hasPrompted = localStorage.getItem('delta_prompted_admin');
             if (!hasPrompted && !isAdmin) {
@@ -1128,11 +1171,9 @@
             const btnOqc = document.getElementById('btn-oqc-trends-lobby');
             const lblBtnAdmin = document.getElementById('lbl-btn-admin');
             if (isAdmin) {
-                btnOqc.classList.remove('hidden');
-                btnOqc.classList.add('flex');
+                btnOqc.classList.remove('hidden'); btnOqc.classList.add('flex');
             } else {
-                btnOqc.classList.add('hidden');
-                btnOqc.classList.remove('flex');
+                btnOqc.classList.add('hidden'); btnOqc.classList.remove('flex');
             }
             if (lblBtnAdmin) lblBtnAdmin.textContent = `Admin (${allAdmins.length}/${maxAdminSlots})`;
             syncApprovalModalState();
@@ -1191,15 +1232,12 @@
 
             if (regSec && fullMsg) {
                 if (isAdmin) {
-                    regSec.classList.add('hidden');
-                    fullMsg.classList.add('hidden');
+                    regSec.classList.add('hidden'); fullMsg.classList.add('hidden');
                 } else {
                     if (allAdmins.length >= maxAdminSlots) {
-                        regSec.classList.add('hidden');
-                        fullMsg.classList.remove('hidden');
+                        regSec.classList.add('hidden'); fullMsg.classList.remove('hidden');
                     } else {
-                        regSec.classList.remove('hidden');
-                        fullMsg.classList.add('hidden');
+                        regSec.classList.remove('hidden'); fullMsg.classList.add('hidden');
                     }
                 }
             }
@@ -1216,8 +1254,7 @@
             document.getElementById('admin-onboarding-modal').classList.add('hidden');
             document.getElementById('admin-onboarding-modal').classList.remove('flex');
             
-            cancelRemoveAdmin();
-            cancelChangeAdminSlots();
+            cancelRemoveAdmin(); cancelChangeAdminSlots();
             document.getElementById('admin-name-input').value = adminSavedName || localStorage.getItem('delta_last_name') || '';
             document.getElementById('pin-input').value = '';
             renderAdminModalContent();
@@ -1231,37 +1268,27 @@
             document.getElementById('pin-modal').classList.remove('flex');
         };
 
-        // --- AGREGAR O RESTAR ESPACIOS DE ADMINISTRADOR CON PIN ---
         window.promptChangeAdminSlots = function(delta) {
             const newTotal = maxAdminSlots + delta;
-            if (newTotal < 1) {
-                return showNotification("Debe existir al menos 1 espacio de administrador.");
-            }
-            if (newTotal < allAdmins.length) {
-                return showNotification(`No puedes reducir a ${newTotal} porque ya hay ${allAdmins.length} administradores activos. Elimina uno primero.`);
-            }
+            if (newTotal < 1) return showNotification("Debe existir al menos 1 espacio de administrador.");
+            if (newTotal < allAdmins.length) return showNotification(`No puedes reducir a ${newTotal} porque ya hay ${allAdmins.length} administradores activos. Elimina uno primero.`);
 
             pendingSlotChangeDelta = delta;
-            document.getElementById('admin-main-view').classList.add('hidden');
-            document.getElementById('admin-main-view').classList.remove('flex');
-            document.getElementById('admin-delete-confirm-view').classList.add('hidden');
-            document.getElementById('admin-delete-confirm-view').classList.remove('flex');
+            document.getElementById('admin-main-view').classList.add('hidden'); document.getElementById('admin-main-view').classList.remove('flex');
+            document.getElementById('admin-delete-confirm-view').classList.add('hidden'); document.getElementById('admin-delete-confirm-view').classList.remove('flex');
 
             const actionText = delta > 0 ? "Aumentar" : "Reducir";
             document.getElementById('admin-slots-title').textContent = `${actionText} Espacios`;
             document.getElementById('admin-slots-target-desc').textContent = `Ingresa el PIN para cambiar la capacidad máxima de ${maxAdminSlots} a ${newTotal} espacios.`;
             document.getElementById('admin-slots-pin-input').value = '';
 
-            document.getElementById('admin-slots-confirm-view').classList.remove('hidden');
-            document.getElementById('admin-slots-confirm-view').classList.add('flex');
+            document.getElementById('admin-slots-confirm-view').classList.remove('hidden'); document.getElementById('admin-slots-confirm-view').classList.add('flex');
         };
 
         window.cancelChangeAdminSlots = function() {
             pendingSlotChangeDelta = 0;
-            document.getElementById('admin-slots-confirm-view').classList.add('hidden');
-            document.getElementById('admin-slots-confirm-view').classList.remove('flex');
-            document.getElementById('admin-main-view').classList.remove('hidden');
-            document.getElementById('admin-main-view').classList.add('flex');
+            document.getElementById('admin-slots-confirm-view').classList.add('hidden'); document.getElementById('admin-slots-confirm-view').classList.remove('flex');
+            document.getElementById('admin-main-view').classList.remove('hidden'); document.getElementById('admin-main-view').classList.add('flex');
         };
 
         window.confirmChangeAdminSlots = async function() {
@@ -1271,33 +1298,25 @@
 
             const newMax = maxAdminSlots + pendingSlotChangeDelta;
             if (newMax < 1 || newMax < allAdmins.length) {
-                cancelChangeAdminSlots();
-                return showNotification("Operación no válida con la cantidad actual de administradores.");
+                cancelChangeAdminSlots(); return showNotification("Operación no válida.");
             }
 
             try {
-                syncState = 'syncing';
-                updateSyncStatusUI();
+                syncState = 'syncing'; updateSyncStatusUI();
                 await setDoc(adminConfigDocRef, { maxSlots: newMax, updatedAt: Date.now() }, { merge: true });
                 maxAdminSlots = newMax;
                 markAsSynced();
                 showNotification(`Capacidad actualizada a ${newMax} espacios.`);
-                cancelChangeAdminSlots();
-                updateAdminUI();
-                renderAdminModalContent();
+                cancelChangeAdminSlots(); updateAdminUI(); renderAdminModalContent();
             } catch (e) {
-                console.error(e);
-                showNotification("Error al actualizar los espacios en la nube.");
+                console.error(e); showNotification("Error al actualizar los espacios.");
             }
         };
 
-        // --- REVOCAR ACCESO DE UN ADMINISTRADOR CON PIN ---
         window.promptRemoveAdmin = function(targetUuid, targetName, isSelf) {
             targetAdminToRemove = targetUuid;
-            document.getElementById('admin-main-view').classList.add('hidden');
-            document.getElementById('admin-main-view').classList.remove('flex');
-            document.getElementById('admin-slots-confirm-view').classList.add('hidden');
-            document.getElementById('admin-slots-confirm-view').classList.remove('flex');
+            document.getElementById('admin-main-view').classList.add('hidden'); document.getElementById('admin-main-view').classList.remove('flex');
+            document.getElementById('admin-slots-confirm-view').classList.add('hidden'); document.getElementById('admin-slots-confirm-view').classList.remove('flex');
             
             const desc = isSelf 
                 ? `Ingresa el PIN para darte de baja como administrador (${targetName}) y liberar tu espacio.`
@@ -1305,16 +1324,13 @@
             document.getElementById('admin-delete-target-desc').textContent = desc;
             document.getElementById('admin-delete-pin-input').value = '';
 
-            document.getElementById('admin-delete-confirm-view').classList.remove('hidden');
-            document.getElementById('admin-delete-confirm-view').classList.add('flex');
+            document.getElementById('admin-delete-confirm-view').classList.remove('hidden'); document.getElementById('admin-delete-confirm-view').classList.add('flex');
         };
 
         window.cancelRemoveAdmin = function() {
             targetAdminToRemove = null;
-            document.getElementById('admin-delete-confirm-view').classList.add('hidden');
-            document.getElementById('admin-delete-confirm-view').classList.remove('flex');
-            document.getElementById('admin-main-view').classList.remove('hidden');
-            document.getElementById('admin-main-view').classList.add('flex');
+            document.getElementById('admin-delete-confirm-view').classList.add('hidden'); document.getElementById('admin-delete-confirm-view').classList.remove('flex');
+            document.getElementById('admin-main-view').classList.remove('hidden'); document.getElementById('admin-main-view').classList.add('flex');
         };
 
         window.confirmRemoveAdmin = async function() {
@@ -1323,22 +1339,16 @@
             if (!targetAdminToRemove) return;
 
             try {
-                syncState = 'syncing';
-                updateSyncStatusUI();
+                syncState = 'syncing'; updateSyncStatusUI();
                 await deleteDoc(doc(db, 'delta_admins', targetAdminToRemove));
                 markAsSynced();
                 if (targetAdminToRemove === deviceUuid) {
                     isAdmin = false;
                     localStorage.setItem('delta_is_admin', 'false');
                     showNotification("Te has dado de baja como Administrador.");
-                } else {
-                    showNotification("Dispositivo administrador eliminado.");
-                }
+                } else { showNotification("Dispositivo administrador eliminado."); }
                 cancelRemoveAdmin();
-            } catch(e) {
-                console.error(e);
-                showNotification("Error al eliminar administrador.");
-            }
+            } catch(e) { console.error(e); showNotification("Error al eliminar administrador."); }
         };
 
         window.verifyAndRegisterAdmin = async function() {
@@ -1350,12 +1360,9 @@
 
             try {
                 const alreadyRegistered = allAdmins.some(a => a.id === deviceUuid);
-                if (!alreadyRegistered && allAdmins.length >= maxAdminSlots) {
-                    return showNotification(`Límite máximo de ${maxAdminSlots} administradores alcanzado.`);
-                }
+                if (!alreadyRegistered && allAdmins.length >= maxAdminSlots) return showNotification(`Límite de ${maxAdminSlots} administradores alcanzado.`);
 
-                syncState = 'syncing';
-                updateSyncStatusUI();
+                syncState = 'syncing'; updateSyncStatusUI();
                 const adminDocRef = doc(db, 'delta_admins', deviceUuid);
                 await setDoc(adminDocRef, { name: adminName, registeredAt: Date.now(), uuid: deviceUuid });
                 markAsSynced();
@@ -1368,10 +1375,7 @@
                 
                 document.getElementById('pin-input').value = '';
                 showNotification(`¡Bienvenido, ${adminName}! Este dispositivo ahora es Administrador.`);
-            } catch(e) {
-                console.error(e);
-                showNotification("Error al registrar administrador.");
-            }
+            } catch(e) { console.error(e); showNotification("Error al registrar administrador."); }
         };
 
         async function initApp() {
@@ -1382,16 +1386,14 @@
                 const app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
                 
-                // Caché local persistente para carga instantánea en 0.1s sin bloquear el estado de red
                 db = initializeFirestore(app, {
-                    localCache: persistentLocalCache({
-                        tabManager: persistentMultipleTabManager()
-                    })
+                    localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
                 });
 
                 rechazosRef = collection(db, 'rechazos_delta');
                 approvalsRef = collection(db, 'delta_approvals');
                 adminsRef = collection(db, 'delta_admins');
+                chunksRef = collection(db, 'delta_image_chunks');
                 adminConfigDocRef = doc(db, 'delta_config', 'admin_settings');
 
                 await signInAnonymously(auth);
@@ -1401,26 +1403,18 @@
 
             } catch (error) {
                 console.error(error);
-                syncState = 'offline';
-                updateSyncStatusUI();
+                syncState = 'offline'; updateSyncStatusUI();
             }
         }
 
         function setupRealtimeListeners() {
-            // Listener ligero de configuración: al ser de menos de 1KB, confirma conexión al instante
             if (unsubscribeAdminConfig) unsubscribeAdminConfig();
             unsubscribeAdminConfig = onSnapshot(adminConfigDocRef, (docSnap) => {
-                if (docSnap.exists() && typeof docSnap.data().maxSlots === 'number') {
-                    maxAdminSlots = docSnap.data().maxSlots;
-                } else {
-                    maxAdminSlots = 3;
-                }
-                markAsSynced();
-                updateAdminUI();
-                renderAdminModalContent();
+                if (docSnap.exists() && typeof docSnap.data().maxSlots === 'number') maxAdminSlots = docSnap.data().maxSlots;
+                else maxAdminSlots = 3;
+                markAsSynced(); updateAdminUI(); renderAdminModalContent();
             });
 
-            // Listener en tiempo real para la lista de Administradores
             if (unsubscribeAdmins) unsubscribeAdmins();
             unsubscribeAdmins = onSnapshot(adminsRef, (snap) => {
                 allAdmins = [];
@@ -1429,8 +1423,7 @@
                     const data = d.data();
                     allAdmins.push({ id: d.id, ...data });
                     if (d.id === deviceUuid) {
-                        isFound = true;
-                        adminSavedName = data.name || adminSavedName;
+                        isFound = true; adminSavedName = data.name || adminSavedName;
                         if (adminSavedName) localStorage.setItem('delta_admin_name', adminSavedName);
                     }
                 });
@@ -1438,46 +1431,29 @@
                 allAdmins.sort((a, b) => (a.registeredAt || 0) - (b.registeredAt || 0));
                 isAdmin = isFound;
                 localStorage.setItem('delta_is_admin', isAdmin ? 'true' : 'false');
-
-                markAsSynced();
-                updateAdminUI();
-                renderAdminModalContent();
-
-                if (!isAdmin) {
-                    checkFirstTimeAdmin();
-                }
+                markAsSynced(); updateAdminUI(); renderAdminModalContent();
+                if (!isAdmin) checkFirstTimeAdmin();
             });
 
-            // Listener principal de Registros (sin includeMetadataChanges para no trabar el indicador con fotos pesadas)
             onSnapshot(rechazosRef, (snapshot) => {
                 allRecords = [];
                 snapshot.forEach(docSnap => allRecords.push({ id: docSnap.id, ...docSnap.data() }));
-                
                 markAsSynced();
-                
-                if(currentPiece) {
-                    updateDashboard();
-                    renderBitacora();
-                }
+                if(currentPiece) { updateDashboard(); renderBitacora(); }
             }, (err) => {
                 console.error(err);
-                syncState = 'offline';
-                updateSyncStatusUI();
+                syncState = 'offline'; updateSyncStatusUI();
             });
 
-            // Listener en tiempo real para solicitudes de borrado
             if (unsubscribeApprovals) unsubscribeApprovals();
             unsubscribeApprovals = onSnapshot(approvalsRef, (snapshot) => {
                 pendingApprovalsList = [];
                 snapshot.forEach(docSnap => {
                     const data = docSnap.data();
-                    if (data.status === 'pending') {
-                        pendingApprovalsList.push({ id: docSnap.id, ...data });
-                    }
+                    if (data.status === 'pending') pendingApprovalsList.push({ id: docSnap.id, ...data });
                 });
                 pendingApprovalsList.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
-                markAsSynced();
-                syncApprovalModalState();
+                markAsSynced(); syncApprovalModalState();
             });
         }
 
@@ -1505,10 +1481,8 @@
             document.getElementById('summary-variant-row').classList.add('hidden');
             
             document.getElementById('stat-card-piezas').classList.remove('hidden', 'col-span-2');
-            document.getElementById('stat-card-carros').classList.add('hidden');
-            document.getElementById('stat-card-carros').classList.remove('flex');
-            document.getElementById('stat-card-cajas').classList.add('hidden');
-            document.getElementById('stat-card-cajas').classList.remove('flex');
+            document.getElementById('stat-card-carros').classList.add('hidden'); document.getElementById('stat-card-carros').classList.remove('flex');
+            document.getElementById('stat-card-cajas').classList.add('hidden'); document.getElementById('stat-card-cajas').classList.remove('flex');
             document.getElementById('stat-card-tarimas').classList.add('hidden');
             
             document.getElementById('lbl-cantidad-rechazos').textContent = "Cantidad";
@@ -1569,9 +1543,7 @@
                 containerUprCowlPocket.classList.add('hidden'); containerCover.classList.remove('hidden');
             }
 
-            updateDashboard();
-            renderBitacora();
-            checkDailyInspector(); 
+            updateDashboard(); renderBitacora(); checkDailyInspector(); 
         };
 
         window.goBackToLobby = function() {
@@ -1590,8 +1562,7 @@
             if (!palletsCount || isNaN(palletsCount) || parseInt(palletsCount) <= 0) return;
 
             try {
-                syncState = 'syncing';
-                updateSyncStatusUI();
+                syncState = 'syncing'; updateSyncStatusUI();
                 await addDoc(rechazosRef, {
                     side: 'N/A', damage: 'Tarimas OK', variant: 'N/A', type: 'Pieza',
                     quantity: 0, pallets: parseInt(palletsCount), photos: [],
@@ -1601,10 +1572,7 @@
                 });
                 markAsSynced();
                 showNotification(`¡Se registraron ${palletsCount} tarimas OK!`);
-            } catch(e) {
-                console.error(e);
-                showNotification("Error al guardar tarimas.");
-            }
+            } catch(e) { console.error(e); showNotification("Error al guardar tarimas."); }
         };
 
         window.openCoverRejectWizard = function() {
@@ -1626,8 +1594,7 @@
                 let pallets = r.pallets || 0;
                 
                 if (currentPiece === 'COVER') {
-                    stats.piezasTotal += qty;
-                    stats.tarimas += pallets;
+                    stats.piezasTotal += qty; stats.tarimas += pallets;
                 } else if (currentPiece === 'POCKET') {
                     if (r.type === 'Pieza') { stats.piezasTotal += qty; if (r.side === 'RH') stats.rh += qty; if (r.side === 'LH') stats.lh += qty; }
                     else if (r.type === 'Caja') { stats.cajasTotal += qty; stats.cajaNormal += qty; }
@@ -1673,7 +1640,6 @@
                 }
 
                 const isTarimasOK = r.damage === 'Tarimas OK';
-
                 let iconClass = 'fa-puzzle-piece text-red-500 bg-red-100 border-red-200';
                 if (r.type && r.type.includes('Carro')) iconClass = 'fa-truck text-purple-600 bg-purple-100 border-purple-200';
                 if (r.type && r.type.includes('Caja')) iconClass = 'fa-box-open text-teal-600 bg-teal-100 border-teal-200';
@@ -1685,11 +1651,21 @@
                 const isSelected = selectedForDeletion.has(r.id);
                 
                 const variantSpan = (r.variant && r.variant !== 'N/A') ? `<span class="bg-black/5 border border-white px-2 py-0.5 rounded-md text-gray-800 font-bold">${r.variant}</span>` : '';
-                
                 const inspectorStr = r.inspectorName ? `<span class="text-[9px] text-gray-500 block font-bold"><i class="fas fa-user mr-0.5"></i> ${r.inspectorName.substring(0, 15)}</span>` : `<span class="text-[9px] text-gray-400 block font-bold">Sin asignar</span>`;
 
                 let damageIcon = isTarimasOK ? 'fa-check-double' : 'fa-exclamation-triangle';
                 let damageStyle = isTarimasOK ? 'text-green-700 bg-green-100/90 border-green-200' : 'text-red-700 bg-red-100/90 border-red-200';
+
+                let photosHTML = '';
+                if (r.photos && r.photos.length > 0) {
+                    photosHTML = `<div class="flex gap-2 mt-3 hide-scrollbar overflow-x-auto pb-1">` + 
+                        r.photos.map(p => {
+                            const isObj = typeof p === 'object';
+                            const idStr = isObj ? p.id : p;
+                            const thumbStr = isObj ? p.thumbnail : p;
+                            return `<img src="${thumbStr}" class="w-12 h-12 rounded-lg object-cover border border-white shadow-sm cursor-pointer active:scale-95 bg-gray-200" onclick="event.stopPropagation(); openPhotoViewer('${idStr}', '${thumbStr}')">`;
+                        }).join('') + `</div>`;
+                }
 
                 const card = document.createElement('div');
                 card.className = `p-3.5 rounded-2xl shadow-sm mb-3 flex items-start gap-3 glass-btn border border-white ${isDeleteMode ? (isSelected ? 'bg-red-50/90 border-red-400 ring-2 ring-red-400' : 'cursor-pointer') : 'cursor-pointer'}`;
@@ -1703,20 +1679,19 @@
                     <div class="flex-1 overflow-hidden ml-1">
                         <div class="flex justify-between items-start">
                             <p class="font-black text-gray-900 text-sm drop-shadow-sm">${r.type} ${qtyText} ${palletText}</p>
-                            <div class="text-[10px] text-gray-600 font-bold text-right leading-tight">${formatTime(r.timestamp)}${inspectorStr}</div>
+                            <div class="text-[10px] text-gray-600 font-bold text-right leading-tight">${formatTimeShort(r.timestamp)}${inspectorStr}</div>
                         </div>
                         <p class="text-xs flex flex-wrap gap-1.5 mt-2">
                             ${!isTarimasOK ? `<span class="font-bold border backdrop-blur-sm ${sideColor} px-2 py-0.5 rounded-md">${r.side}</span>` : ''}
                             ${variantSpan}
                             <span class="${damageStyle} px-2 py-0.5 rounded-md font-bold truncate max-w-full shadow-sm"><i class="fas ${damageIcon} text-[10px] mr-1"></i>${r.damage}</span>
                         </p>
-                        ${r.photos && r.photos.length > 0 ? `<div class="flex gap-2 mt-3 hide-scrollbar overflow-x-auto pb-1">${r.photos.map(p => `<img src="${p}" class="w-12 h-12 rounded-lg object-cover border border-white shadow-sm cursor-pointer active:scale-95" onclick="event.stopPropagation(); openPhotoViewer('${p}')">`).join('')}</div>` : ''}
+                        ${photosHTML}
                     </div>
                 `;
                 container.appendChild(card);
             });
         }
-        const formatTime = (ts) => new Date(ts).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
 
         window.openRecordDetails = function(id) {
             if (isDeleteMode) return;
@@ -1725,7 +1700,12 @@
 
             const photoContainer = document.getElementById('details-photos');
             if (r.photos && r.photos.length > 0) {
-                photoContainer.innerHTML = r.photos.map(p => `<img src="${p}" class="w-full max-h-[60vh] object-contain snap-center rounded-2xl bg-black/80 shadow-2xl border border-white/20 cursor-pointer active:scale-95" onclick="openPhotoViewer('${p}')">`).join('');
+                photoContainer.innerHTML = r.photos.map(p => {
+                    const isObj = typeof p === 'object';
+                    const idStr = isObj ? p.id : p;
+                    const thumbStr = isObj ? p.thumbnail : p;
+                    return `<img src="${thumbStr}" class="w-full max-h-[60vh] object-contain snap-center rounded-2xl bg-black/80 shadow-2xl border border-white/20 cursor-pointer active:scale-95" onclick="openPhotoViewer('${idStr}', '${thumbStr}')">`;
+                }).join('');
                 photoContainer.classList.remove('hidden');
             } else {
                 photoContainer.innerHTML = '<div class="w-full flex flex-col items-center justify-center text-white/50 py-12"><i class="fas fa-image text-5xl mb-3"></i><p class="font-bold">Sin fotografías</p></div>';
@@ -1744,7 +1724,7 @@
             damageEl.textContent = r.damage;
             damageEl.className = isTarimasOK ? 'text-green-600 font-black text-xl mb-3 drop-shadow-sm' : 'text-red-600 font-black text-xl mb-3 drop-shadow-sm';
             
-            document.getElementById('details-time').textContent = formatTime(r.timestamp);
+            document.getElementById('details-time').textContent = formatTimeShort(r.timestamp);
 
             let badgesHtml = '';
             if(r.side && r.side !== 'N/A' && !isTarimasOK) badgesHtml += `<span class="bg-black/10 text-gray-800 border border-white/50 px-3 py-1 rounded-md font-bold text-sm shadow-sm">${r.side}</span>`;
@@ -1765,29 +1745,31 @@
             if(clonePhotos.length === 0) {
                 container.innerHTML = '<span class="text-xs text-gray-400 italic">Sin fotos.</span>';
             } else {
-                container.innerHTML = clonePhotos.map((p, i) => `
+                container.innerHTML = clonePhotos.map((p, i) => {
+                    const thumb = typeof p === 'object' ? p.thumbnail : p;
+                    const pId = typeof p === 'object' ? p.id : p;
+                    return `
                     <div class="relative w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden border border-gray-200 shadow-sm bg-black">
-                        <img src="${p}" class="w-full h-full object-cover cursor-pointer" onclick="openPhotoViewer('${p}')">
+                        <img src="${thumb}" class="w-full h-full object-cover cursor-pointer" onclick="openPhotoViewer('${pId}', '${thumb}')">
                         <button onclick="removeClonePhoto(${i})" class="absolute top-0 right-0 bg-red-500 text-white text-[10px] w-5 h-5 rounded-bl shadow flex items-center justify-center active:scale-95"><i class="fas fa-times"></i></button>
                     </div>
-                `).join('');
+                `}).join('');
             }
         }
 
-        window.removeClonePhoto = function(i) {
-            clonePhotos.splice(i, 1);
-            renderClonePhotos();
-        };
+        window.removeClonePhoto = function(i) { clonePhotos.splice(i, 1); renderClonePhotos(); };
 
         window.handleClonePhotos = async function(e) {
             if(!e.target.files) return;
-            if (clonePhotos.length >= 3) return showNotification("Máximo 3 fotos permitidas.");
-            const file = e.target.files[0];
-            if(file) {
-                const b64 = await resizeImageAndConvert(file);
-                if(b64) clonePhotos.push(b64);
-                renderClonePhotos();
+            // Quitada la limitación de 3 fotos
+            for (let i = 0; i < e.target.files.length; i++) {
+                const file = e.target.files[i];
+                if(file) {
+                    const photoObj = await resizeImageAndConvert(file);
+                    if(photoObj) clonePhotos.push(photoObj);
+                }
             }
+            renderClonePhotos();
             e.target.value = ''; 
         };
 
@@ -1801,6 +1783,21 @@
             document.getElementById('clone-quantity').textContent = cloneQuantityValue;
         };
 
+        async function uploadChunksInBackground(photosArray) {
+            if (!navigator.onLine) return; 
+            for (const photo of photosArray) {
+                if (typeof photo === 'object' && photo.chunks && photo.chunks.length > 0) {
+                    for (let i = 0; i < photo.chunks.length; i++) {
+                        const chunkId = `${photo.id}_${i}`;
+                        setDoc(doc(chunksRef, chunkId), {
+                            imageId: photo.id, chunkIndex: i, totalChunks: photo.chunks.length, data: photo.chunks[i]
+                        }).catch(e => console.error("Error sync chunk", e));
+                    }
+                    delete photo.chunks;
+                }
+            }
+        }
+
         window.duplicateRecord = async function(id) {
             const activeName = inspectorName || (isAdmin ? adminSavedName : '');
             if(!activeName) return showNotification("¡Atención! Asigna un nombre en la parte de arriba primero.");
@@ -1809,12 +1806,10 @@
             if (!original) return;
 
             const btn = document.getElementById('btn-duplicate-record');
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin text-2xl"></i> Registrando...';
-            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin text-2xl"></i> Registrando...'; btn.disabled = true;
 
             try {
-                syncState = 'syncing';
-                updateSyncStatusUI();
+                syncState = 'syncing'; updateSyncStatusUI();
 
                 const newRecord = { ...original };
                 delete newRecord.id; 
@@ -1822,38 +1817,33 @@
                 newRecord.dateString = getLocalDateString();
                 newRecord.inspectorId = currentUser ? currentUser.uid.substring(0, 4) : deviceUuid.substring(0, 4);
                 newRecord.inspectorName = activeName;
-                
                 newRecord.quantity = cloneQuantityValue;
-                if (currentPiece === 'COVER' && newRecord.damage !== 'Tarimas OK') {
-                    newRecord.pallets = 0; 
-                }
+                if (currentPiece === 'COVER' && newRecord.damage !== 'Tarimas OK') newRecord.pallets = 0; 
                 
-                newRecord.photos = clonePhotos;
+                const photosToSave = clonePhotos.map(p => typeof p === 'object' ? { id: p.id, thumbnail: p.thumbnail } : p);
+                uploadChunksInBackground(clonePhotos);
+                newRecord.photos = photosToSave;
 
                 await addDoc(rechazosRef, newRecord);
                 markAsSynced();
                 showNotification(`¡${cloneQuantityValue} registro(s) extra añadido(s)!`);
                 closeRecordDetails();
             } catch(e) {
-                console.error(e);
-                showNotification("Error al crear el nuevo registro.");
+                console.error(e); showNotification("Error al crear el nuevo registro.");
             } finally {
-                btn.innerHTML = '<i class="fas fa-copy text-2xl"></i> Registrar más iguales';
-                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-copy text-2xl"></i> Registrar más iguales'; btn.disabled = false;
             }
         };
 
         document.getElementById('btn-open-wizard').addEventListener('click', () => {
             const activeName = inspectorName || (isAdmin ? adminSavedName : '');
             if(!activeName) { openInspectorModal(); return showNotification("Configura quién está inspeccionando."); }
-            document.getElementById('wizard-modal').classList.remove('hidden');
-            document.getElementById('wizard-modal').classList.add('flex');
+            document.getElementById('wizard-modal').classList.remove('hidden'); document.getElementById('wizard-modal').classList.add('flex');
             resetWizard();
         });
 
         document.getElementById('btn-close-wizard').addEventListener('click', () => {
-            document.getElementById('wizard-modal').classList.add('hidden');
-            document.getElementById('wizard-modal').classList.remove('flex');
+            document.getElementById('wizard-modal').classList.add('hidden'); document.getElementById('wizard-modal').classList.remove('flex');
         });
 
         window.selectOption = function(cat, val, step) {
@@ -1874,16 +1864,9 @@
             let nextStep = step;
             if (cat === 'damage') {
                 if (currentPiece === 'COWL' || currentPiece === 'COVER') {
-                    newRecordData['variant'] = 'N/A';
-                    newRecordData['type'] = 'Pieza';
-                    nextStep = 5; 
-                } else {
-                    nextStep = 3;
-                }
-            } else if (cat === 'variant') {
-                nextStep = 4;
-            }
-
+                    newRecordData['variant'] = 'N/A'; newRecordData['type'] = 'Pieza'; nextStep = 5; 
+                } else { nextStep = 3; }
+            } else if (cat === 'variant') { nextStep = 4; }
             goToStep(nextStep);
         };
 
@@ -1901,13 +1884,15 @@
 
         window.handlePhotos = async function(e) {
             if(!e.target.files) return;
-            if (newRecordData.photos.length >= 3) return showNotification("Máximo 3 fotos permitidas.");
-            const file = e.target.files[0];
-            if(file) {
-                const b64 = await resizeImageAndConvert(file);
-                if(b64) newRecordData.photos.push(b64);
-                renderPhotoPreviews();
+            // Quitada la limitación de 3 fotos
+            for (let i = 0; i < e.target.files.length; i++) {
+                const file = e.target.files[i];
+                if(file) {
+                    const photoObj = await resizeImageAndConvert(file);
+                    if(photoObj) newRecordData.photos.push(photoObj);
+                }
             }
+            renderPhotoPreviews();
             e.target.value = ''; 
         };
 
@@ -1918,11 +1903,31 @@
                     const img = new Image();
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
-                        let scale = img.width > 1280 ? 1280 / img.width : 1;
-                        canvas.width = img.width * scale; 
-                        canvas.height = img.height * scale;
-                        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.85));
+                        const ctx = canvas.getContext('2d');
+                        
+                        let scaleFull = img.width > 1600 ? 1600 / img.width : 1;
+                        canvas.width = img.width * scaleFull;
+                        canvas.height = img.height * scaleFull;
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        const fullB64 = canvas.toDataURL('image/jpeg', 0.85);
+
+                        let scaleThumb = img.width > 200 ? 200 / img.width : 1;
+                        canvas.width = img.width * scaleThumb;
+                        canvas.height = img.height * scaleThumb;
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        const thumbB64 = canvas.toDataURL('image/jpeg', 0.5);
+
+                        const id = 'img_' + Date.now() + '_' + Math.random().toString(36).substring(2,9);
+                        
+                        saveImageLocally(id, fullB64);
+                        
+                        const chunks = [];
+                        const chunkSize = 750000;
+                        for (let i = 0; i < fullB64.length; i += chunkSize) {
+                            chunks.push(fullB64.substring(i, i + chunkSize));
+                        }
+
+                        resolve({ id, thumbnail: thumbB64, chunks });
                     };
                     img.src = e.target.result;
                 };
@@ -1932,15 +1937,17 @@
 
         function renderPhotoPreviews() {
             const c = document.getElementById('photo-preview-container');
-            c.innerHTML = newRecordData.photos.map((p, i) => `<div class="relative w-16 h-16 flex-shrink-0 rounded-xl overflow-hidden border-2 border-white shadow-sm"><img src="${p}" class="w-full h-full object-cover cursor-pointer" onclick="openPhotoViewer('${p}')"><button onclick="removePhoto(${i})" class="absolute top-0 right-0 bg-red-500 text-white text-xs w-6 h-6 rounded-bl-lg shadow flex items-center justify-center"><i class="fas fa-times"></i></button></div>`).join('');
+            c.innerHTML = newRecordData.photos.map((p, i) => `
+                <div class="relative w-16 h-16 flex-shrink-0 rounded-xl overflow-hidden border-2 border-white shadow-sm">
+                    <img src="${p.thumbnail}" class="w-full h-full object-cover cursor-pointer" onclick="openPhotoViewer('${p.id}', '${p.thumbnail}')">
+                    <button onclick="removePhoto(${i})" class="absolute top-0 right-0 bg-red-500 text-white text-xs w-6 h-6 rounded-bl-lg shadow flex items-center justify-center"><i class="fas fa-times"></i></button>
+                </div>
+            `).join('');
             
+            // Eliminada la lógica que ocultaba el botón al llegar a 3 fotos
             const btnLabel = document.getElementById('btn-foto-label');
             if(btnLabel) {
-                if(newRecordData.photos.length >= 3) {
-                    btnLabel.classList.add('hidden'); btnLabel.classList.remove('flex');
-                } else {
-                    btnLabel.classList.remove('hidden'); btnLabel.classList.add('flex');
-                }
+                btnLabel.classList.remove('hidden'); btnLabel.classList.add('flex');
             }
         }
         window.removePhoto = function(i) { newRecordData.photos.splice(i, 1); renderPhotoPreviews(); }
@@ -1970,8 +1977,7 @@
         function resetWizard() {
             newRecordData = { side: null, damage: null, variant: null, type: null, quantity: 1, pallets: 1, photos: [] };
             if (currentPiece === 'COVER' || currentPiece === 'COWL') {
-                newRecordData.type = 'Pieza';
-                document.getElementById('summary-type').textContent = 'Pieza';
+                newRecordData.type = 'Pieza'; document.getElementById('summary-type').textContent = 'Pieza';
             }
 
             document.querySelectorAll('.option-btn.selected').forEach(btn => btn.classList.remove('selected'));
@@ -1994,9 +2000,7 @@
         }
 
         document.getElementById('btn-save-record').addEventListener('click', async () => {
-            if (!newRecordData.side || !newRecordData.damage || !newRecordData.type) {
-                return showNotification("Completa todos los pasos antes de guardar.");
-            }
+            if (!newRecordData.side || !newRecordData.damage || !newRecordData.type) return showNotification("Completa todos los pasos antes de guardar.");
             if ((currentPiece === 'UPR' || currentPiece === 'POCKET') && !newRecordData.variant) return showNotification("Selecciona la variante.");
             
             const activeName = inspectorName || (isAdmin ? adminSavedName : '');
@@ -2006,11 +2010,13 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin text-2xl"></i> Guardando...'; btn.disabled = true;
 
             try {
-                syncState = 'syncing';
-                updateSyncStatusUI();
+                syncState = 'syncing'; updateSyncStatusUI();
+
+                const photosToSave = newRecordData.photos.map(p => ({ id: p.id, thumbnail: p.thumbnail }));
+                uploadChunksInBackground(newRecordData.photos);
 
                 await addDoc(rechazosRef, {
-                    ...newRecordData, pieceType: currentPiece, timestamp: Date.now(), 
+                    ...newRecordData, photos: photosToSave, pieceType: currentPiece, timestamp: Date.now(), 
                     dateString: getLocalDateString(), 
                     inspectorId: currentUser ? currentUser.uid.substring(0, 4) : deviceUuid.substring(0, 4),
                     inspectorName: activeName
@@ -2042,11 +2048,8 @@
         function updateDeleteButton() {
             const b = document.getElementById('btn-confirm-delete');
             b.innerHTML = `<i class="fas fa-paper-plane"></i> Solicitar Borrado (${selectedForDeletion.size})`;
-            if (selectedForDeletion.size > 0) {
-                b.classList.remove('opacity-50', 'pointer-events-none');
-            } else {
-                b.classList.add('opacity-50', 'pointer-events-none');
-            }
+            if (selectedForDeletion.size > 0) b.classList.remove('opacity-50', 'pointer-events-none');
+            else b.classList.add('opacity-50', 'pointer-events-none');
         }
 
         window.requestDeletion = async function() {
@@ -2055,95 +2058,55 @@
             const itemsToDelete = [];
             selectedForDeletion.forEach(id => {
                 const rec = allRecords.find(x => x.id === id);
-                if (rec) {
-                    itemsToDelete.push({
-                        id: rec.id,
-                        pieceType: rec.pieceType || currentPiece,
-                        type: rec.type,
-                        damage: rec.damage,
-                        side: rec.side || 'N/A',
-                        quantity: rec.quantity || 1
-                    });
-                }
+                if (rec) itemsToDelete.push({ id: rec.id, pieceType: rec.pieceType || currentPiece, type: rec.type, damage: rec.damage, side: rec.side || 'N/A', quantity: rec.quantity || 1 });
             });
-
             if (itemsToDelete.length === 0) return;
 
             try {
-                syncState = 'syncing';
-                updateSyncStatusUI();
-
-                await addDoc(approvalsRef, {
-                    items: itemsToDelete,
-                    status: 'pending',
-                    timestamp: Date.now()
-                });
+                syncState = 'syncing'; updateSyncStatusUI();
+                await addDoc(approvalsRef, { items: itemsToDelete, status: 'pending', timestamp: Date.now() });
                 markAsSynced();
-
                 showNotification("¡Solicitud enviada! Se eliminarán cuando un administrador lo apruebe.");
                 toggleDeleteMode();
-            } catch(e) {
-                console.error(e);
-                showNotification("Error al enviar la solicitud de borrado.");
-            }
+            } catch(e) { console.error(e); showNotification("Error al enviar la solicitud de borrado."); }
         };
 
-        // --- MODALES Y LÓGICA DE APROBACIÓN DE ADMIN (SINCRONIZACIÓN EN VIVO Y SALTAR) ---
+        // --- MODALES Y LÓGICA DE APROBACIÓN DE ADMIN ---
         function syncApprovalModalState() {
             const btnPendingLobby = document.getElementById('btn-pending-approvals-lobby');
             const countPendingLobby = document.getElementById('lobby-pending-count');
 
             if (isAdmin && pendingApprovalsList.length > 0) {
-                if (btnPendingLobby) {
-                    btnPendingLobby.classList.remove('hidden');
-                    btnPendingLobby.classList.add('flex');
-                }
+                if (btnPendingLobby) { btnPendingLobby.classList.remove('hidden'); btnPendingLobby.classList.add('flex'); }
                 if (countPendingLobby) countPendingLobby.textContent = pendingApprovalsList.length;
             } else {
-                if (btnPendingLobby) {
-                    btnPendingLobby.classList.add('hidden');
-                    btnPendingLobby.classList.remove('flex');
-                }
+                if (btnPendingLobby) { btnPendingLobby.classList.add('hidden'); btnPendingLobby.classList.remove('flex'); }
             }
 
             const modal = document.getElementById('admin-approval-modal');
             if (!isAdmin) {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-                activeApprovalDocId = null;
-                return;
+                modal.classList.add('hidden'); modal.classList.remove('flex');
+                activeApprovalDocId = null; return;
             }
 
             if (activeApprovalDocId) {
                 const stillPending = pendingApprovalsList.find(p => p.id === activeApprovalDocId);
                 if (!stillPending) {
                     const nextUnskipped = pendingApprovalsList.find(p => !skippedApprovalDocIds.has(p.id));
-                    if (nextUnskipped) {
-                        showApprovalAdminModal(nextUnskipped.id, nextUnskipped);
-                    } else {
-                        modal.classList.add('hidden');
-                        modal.classList.remove('flex');
-                        activeApprovalDocId = null;
-                        activeApprovalItems = [];
-                    }
+                    if (nextUnskipped) showApprovalAdminModal(nextUnskipped.id, nextUnskipped);
+                    else { modal.classList.add('hidden'); modal.classList.remove('flex'); activeApprovalDocId = null; activeApprovalItems = []; }
                     return;
                 }
             } else {
                 const nextUnskipped = pendingApprovalsList.find(p => !skippedApprovalDocIds.has(p.id));
-                if (nextUnskipped) {
-                    showApprovalAdminModal(nextUnskipped.id, nextUnskipped);
-                }
+                if (nextUnskipped) showApprovalAdminModal(nextUnskipped.id, nextUnskipped);
             }
         }
 
         function showApprovalAdminModal(docId, data) {
-            activeApprovalDocId = docId;
-            activeApprovalItems = data.items || [];
-
-            document.getElementById('approval-list-view').classList.remove('hidden');
-            document.getElementById('approval-list-view').classList.add('flex');
-            document.getElementById('approval-pin-view').classList.add('hidden');
-            document.getElementById('approval-pin-view').classList.remove('flex');
+            activeApprovalDocId = docId; activeApprovalItems = data.items || [];
+            document.getElementById('approval-list-view').classList.remove('hidden'); document.getElementById('approval-list-view').classList.add('flex');
+            document.getElementById('approval-pin-view').classList.add('hidden'); document.getElementById('approval-pin-view').classList.remove('flex');
             document.getElementById('approval-pin-input').value = '';
 
             const container = document.getElementById('approval-items-container');
@@ -2156,19 +2119,13 @@
                     </div>
                 </label>
             `).join('');
-
-            document.getElementById('admin-approval-modal').classList.remove('hidden');
-            document.getElementById('admin-approval-modal').classList.add('flex');
+            document.getElementById('admin-approval-modal').classList.remove('hidden'); document.getElementById('admin-approval-modal').classList.add('flex');
         }
 
         window.skipCurrentApprovalModal = function() {
-            if (activeApprovalDocId) {
-                skippedApprovalDocIds.add(activeApprovalDocId);
-            }
-            activeApprovalDocId = null;
-            activeApprovalItems = [];
-            document.getElementById('admin-approval-modal').classList.add('hidden');
-            document.getElementById('admin-approval-modal').classList.remove('flex');
+            if (activeApprovalDocId) skippedApprovalDocIds.add(activeApprovalDocId);
+            activeApprovalDocId = null; activeApprovalItems = [];
+            document.getElementById('admin-approval-modal').classList.add('hidden'); document.getElementById('admin-approval-modal').classList.remove('flex');
             syncApprovalModalState();
         };
 
@@ -2183,29 +2140,22 @@
             if (!activeApprovalDocId) return;
             const targetId = activeApprovalDocId;
             try {
-                syncState = 'syncing';
-                updateSyncStatusUI();
+                syncState = 'syncing'; updateSyncStatusUI();
                 await deleteDoc(doc(db, 'delta_approvals', targetId));
-                markAsSynced();
-                showNotification("Solicitud de borrado rechazada.");
+                markAsSynced(); showNotification("Solicitud de borrado rechazada.");
             } catch(e) { console.error(e); }
         };
 
         window.showApprovalPinView = function() {
             const checkboxes = document.querySelectorAll('#approval-items-container input[type="checkbox"]:checked');
             if (checkboxes.length === 0) return showNotification("Selecciona al menos un registro para borrar.");
-            
-            document.getElementById('approval-list-view').classList.add('hidden');
-            document.getElementById('approval-list-view').classList.remove('flex');
-            document.getElementById('approval-pin-view').classList.remove('hidden');
-            document.getElementById('approval-pin-view').classList.add('flex');
+            document.getElementById('approval-list-view').classList.add('hidden'); document.getElementById('approval-list-view').classList.remove('flex');
+            document.getElementById('approval-pin-view').classList.remove('hidden'); document.getElementById('approval-pin-view').classList.add('flex');
         };
 
         window.cancelApprovalPinView = function() {
-            document.getElementById('approval-pin-view').classList.add('hidden');
-            document.getElementById('approval-pin-view').classList.remove('flex');
-            document.getElementById('approval-list-view').classList.remove('hidden');
-            document.getElementById('approval-list-view').classList.add('flex');
+            document.getElementById('approval-pin-view').classList.add('hidden'); document.getElementById('approval-pin-view').classList.remove('flex');
+            document.getElementById('approval-list-view').classList.remove('hidden'); document.getElementById('approval-list-view').classList.add('flex');
             document.getElementById('approval-pin-input').value = '';
         };
 
@@ -2216,68 +2166,43 @@
 
             const targetApprovalId = activeApprovalDocId;
             const stillExists = pendingApprovalsList.some(p => p.id === targetApprovalId);
-            if (!stillExists) {
-                showNotification("Esta solicitud ya fue procesada por otro administrador.");
-                syncApprovalModalState();
-                return;
-            }
+            if (!stillExists) { showNotification("Esta solicitud ya fue procesada por otro administrador."); syncApprovalModalState(); return; }
 
             const checkboxes = document.querySelectorAll('#approval-items-container input[type="checkbox"]');
             const idsToDelete = [];
             checkboxes.forEach(cb => {
                 if (cb.checked) {
                     const idx = parseInt(cb.getAttribute('data-idx'));
-                    if (activeApprovalItems[idx]) {
-                        idsToDelete.push(activeApprovalItems[idx].id);
-                    }
+                    if (activeApprovalItems[idx]) idsToDelete.push(activeApprovalItems[idx].id);
                 }
             });
 
             try {
-                syncState = 'syncing';
-                updateSyncStatusUI();
-
+                syncState = 'syncing'; updateSyncStatusUI();
                 await deleteDoc(doc(db, 'delta_approvals', targetApprovalId));
-
-                for (const id of idsToDelete) {
-                    await deleteDoc(doc(db, 'rechazos_delta', id));
-                }
+                for (const id of idsToDelete) await deleteDoc(doc(db, 'rechazos_delta', id));
                 markAsSynced();
-
                 showNotification(`¡Se aprobaron y borraron ${idsToDelete.length} registros!`);
-            } catch(e) {
-                console.error(e);
-                showNotification("Error al ejecutar el borrado autorizado.");
-            }
+            } catch(e) { console.error(e); showNotification("Error al ejecutar el borrado autorizado."); }
         };
 
         // --- REPORTES Y PDF ---
         function getGroupedData(records, pieceTarget) {
-            let grouped = {};
-            let totals = {};
-            let totalTarimas = 0;
-            
+            let grouped = {}; let totals = {}; let totalTarimas = 0;
             records.forEach(r => {
-                let dmg = r.damage;
-                let type = r.type || 'Pieza';
-                let side = (r.side && r.side !== 'N/A') ? r.side : '';
-                let variant = (r.variant && r.variant !== 'N/A') ? r.variant : '';
+                let dmg = r.damage; let type = r.type || 'Pieza';
+                let side = (r.side && r.side !== 'N/A') ? r.side : ''; let variant = (r.variant && r.variant !== 'N/A') ? r.variant : '';
                 let qty = r.quantity !== undefined ? r.quantity : 1;
                 
                 if (pieceTarget === 'COVER') totalTarimas += (r.pallets || 0);
 
                 if (dmg !== 'Tarimas OK') {
-                    if (!totals[type]) totals[type] = 0;
-                    totals[type] += qty;
-
+                    if (!totals[type]) totals[type] = 0; totals[type] += qty;
                     let key = `${dmg}|${type}|${side}|${variant}`;
-                    if (!grouped[key]) {
-                        grouped[key] = { dmg, type, side, variant, qty: 0 };
-                    }
+                    if (!grouped[key]) grouped[key] = { dmg, type, side, variant, qty: 0 };
                     grouped[key].qty += qty;
                 }
             });
-
             return { grouped: Object.values(grouped), totals, totalTarimas };
         }
 
@@ -2289,14 +2214,12 @@
         };
 
         window.closeReportModal = function() {
-            document.getElementById('report-modal').classList.add('hidden');
-            document.getElementById('report-modal').classList.remove('flex');
+            document.getElementById('report-modal').classList.add('hidden'); document.getElementById('report-modal').classList.remove('flex');
         };
 
         window.generateReportContent = function() {
             const date = document.getElementById('report-date-picker').value;
-            const container = document.getElementById('report-content');
-            container.innerHTML = getHTMLReportForPiece(currentPiece, date);
+            document.getElementById('report-content').innerHTML = getHTMLReportForPiece(currentPiece, date);
         };
 
         function getHTMLReportForPiece(pieceTarget, dateStr) {
@@ -2348,29 +2271,18 @@
         };
 
         window.closeExportModal = function() {
-            document.getElementById('export-date-modal').classList.add('hidden');
-            document.getElementById('export-date-modal').classList.remove('flex');
+            document.getElementById('export-date-modal').classList.add('hidden'); document.getElementById('export-date-modal').classList.remove('flex');
         };
 
         window.downloadPDF = function() {
-            if (allRecords.length === 0) {
-                closeExportModal();
-                return showNotification("No hay registros en la nube.");
-            }
-
+            if (allRecords.length === 0) { closeExportModal(); return showNotification("No hay registros en la nube."); }
             const dateStr = document.getElementById('export-date-picker-pdf').value;
             const dateStrFormatted = new Date(dateStr + 'T12:00:00').toLocaleDateString('es-MX', { weekday:'long', year:'numeric', month:'long', day:'numeric' }).toUpperCase();
             
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
-            
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(18);
-            doc.text("REPORTE DE CALIDAD - DELTA TECH", 14, 20);
-            
-            doc.setFontSize(11);
-            doc.setFont("helvetica", "normal");
-            doc.text(`Fecha: ${dateStrFormatted}`, 14, 28);
+            doc.setFont("helvetica", "bold"); doc.setFontSize(18); doc.text("REPORTE DE CALIDAD - DELTA TECH", 14, 20);
+            doc.setFontSize(11); doc.setFont("helvetica", "normal"); doc.text(`Fecha: ${dateStrFormatted}`, 14, 28);
             
             let currentY = 36;
             const piecesList = ['UPR', 'COWL', 'POCKET', 'COVER'];
@@ -2380,12 +2292,8 @@
                 const rawRecords = allRecords.filter(r => (r.pieceType || 'UPR') === piece && r.dateString === dateStr);
                 const records = rawRecords.map(r => {
                     let correctedRecord = { ...r };
-                    if (correctedRecord.pieceType === 'COWL' && correctedRecord.damage === 'Sin etiqueta') {
-                        correctedRecord.damage = 'Contaminación';
-                    }
-                    if (correctedRecord.damage === 'Poste fracturado') {
-                        correctedRecord.damage = 'Fractura';
-                    }
+                    if (correctedRecord.pieceType === 'COWL' && correctedRecord.damage === 'Sin etiqueta') correctedRecord.damage = 'Contaminación';
+                    if (correctedRecord.damage === 'Poste fracturado') correctedRecord.damage = 'Fractura';
                     return correctedRecord;
                 });
                 
@@ -2393,63 +2301,38 @@
                 
                 hasData = true;
                 const { grouped, totals, totalTarimas } = getGroupedData(records, piece);
-                
                 if (currentY > 250) { doc.addPage(); currentY = 20; }
 
-                doc.setFont("helvetica", "bold");
-                doc.setFontSize(14);
-                doc.setTextColor(41, 128, 185);
-                doc.text(`Línea: ${piece}`, 14, currentY);
-                currentY += 6;
-
-                doc.setFontSize(10);
-                doc.setTextColor(0, 0, 0);
+                doc.setFont("helvetica", "bold"); doc.setFontSize(14); doc.setTextColor(41, 128, 185);
+                doc.text(`Línea: ${piece}`, 14, currentY); currentY += 6;
+                doc.setFontSize(10); doc.setTextColor(0, 0, 0);
                 
                 let summaryText = Object.keys(totals).length > 0 ? Object.keys(totals).map(k => `${totals[k]} ${k}`).join(', ') : '0 Rechazos';
-                
                 if (piece === 'COVER' && totalTarimas > 0) {
-                    doc.setFont("helvetica", "bold");
-                    doc.text(`Total Tarimas Revisadas: ${totalTarimas}`, 14, currentY);
-                    currentY += 5;
+                    doc.setFont("helvetica", "bold"); doc.text(`Total Tarimas Revisadas: ${totalTarimas}`, 14, currentY); currentY += 5;
                 }
                 
-                doc.setFont("helvetica", "bold");
-                doc.text(`Total Registrado: ${summaryText}`, 14, currentY);
-                currentY += 6;
+                doc.setFont("helvetica", "bold"); doc.text(`Total Registrado: ${summaryText}`, 14, currentY); currentY += 6;
 
                 const tableBody = grouped.sort((a,b) => a.dmg.localeCompare(b.dmg)).map(item => {
                     let detalles = [];
                     if (item.side) detalles.push(`Lado: ${item.side}`);
                     if (item.variant) detalles.push(piece === 'POCKET' ? `Tamaño: ${item.variant}` : `Variante: ${item.variant}`);
                     let detStr = detalles.length > 0 ? detalles.join('\n') : '-';
-                    
                     return [item.dmg, item.type, detStr, item.qty.toString()];
                 });
                 
                 if (tableBody.length > 0) {
                     doc.autoTable({
-                        startY: currentY,
-                        head: [['Defecto', 'Presentación', 'Detalles', 'Cantidad']],
-                        body: tableBody,
-                        theme: 'grid',
-                        headStyles: { fillColor: [44, 62, 80] },
-                        styles: { fontSize: 9, cellPadding: 3, valign: 'middle' },
-                        margin: { left: 14, right: 14 }
+                        startY: currentY, head: [['Defecto', 'Presentación', 'Detalles', 'Cantidad']], body: tableBody,
+                        theme: 'grid', headStyles: { fillColor: [44, 62, 80] }, styles: { fontSize: 9, cellPadding: 3, valign: 'middle' }, margin: { left: 14, right: 14 }
                     });
                     currentY = doc.lastAutoTable.finalY + 15;
-                } else {
-                    currentY += 10;
-                }
+                } else { currentY += 10; }
             });
 
-            if (!hasData) {
-                doc.setFont("helvetica", "italic");
-                doc.text("No se registraron defectos ni tarimas en esta fecha.", 14, currentY);
-            }
-            
-            doc.save(`Reporte_Delta_${dateStr}.pdf`);
-            closeExportModal();
-            showNotification("¡PDF descargado con éxito!");
+            if (!hasData) { doc.setFont("helvetica", "italic"); doc.text("No se registraron defectos ni tarimas en esta fecha.", 14, currentY); }
+            doc.save(`Reporte_Delta_${dateStr}.pdf`); closeExportModal(); showNotification("¡PDF descargado con éxito!");
         };
 
         function showNotification(msg) {
