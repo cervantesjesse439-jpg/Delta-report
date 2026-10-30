@@ -94,7 +94,8 @@ export function renderBitacora() {
         
         // VINCULACIÓN DINÁMICA DEL INSPECTOR
         const activeInsp = r.inspectorName || state.dailyInspectors[`${r.dateString}_${r.pieceType || 'UPR'}`] || 'Sin asignar';
-        const inspectorStr = `<span class="text-[9px] text-gray-500 block font-bold"><i class="fas fa-user mr-0.5"></i> ${activeInsp.substring(0, 15)}</span>`;
+        const activeInspStr = String(activeInsp || "Sin asignar");
+        const inspectorStr = `<span class="text-[9px] text-gray-500 block font-bold"><i class="fas fa-user mr-0.5"></i> ${activeInspStr.substring(0, 15)}</span>`;
 
         let damageIcon = isTarimasOK ? 'fa-check-double' : 'fa-exclamation-triangle';
         let damageStyle = isTarimasOK ? 'text-green-700 bg-green-100/90 border-green-200' : 'text-red-700 bg-red-100/90 border-red-200';
