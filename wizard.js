@@ -202,6 +202,17 @@ export function changeQuantity(amt) {
     document.getElementById('summary-quantity').textContent = state.newRecordData.quantity;
 }
 
+
+export function changeCartDefectPieces(amt) {
+    const cur = state.newRecordData.cartDefectPieces || 0;
+    const next = Math.max(0, Math.min(50, cur + amt));
+    state.newRecordData.cartDefectPieces = next;
+    const numEl = document.getElementById('record-cart-defect-pieces');
+    if (numEl) numEl.textContent = next > 0 ? `${next}` : '0 (Todos)';
+    const sumEl = document.getElementById('summary-cart-defect-pieces');
+    if (sumEl) sumEl.textContent = next > 0 ? `${next} / 50 pzs` : 'Sin especificar';
+}
+
 export function changePallets(amt) {
     state.newRecordData.pallets = Math.max(1, state.newRecordData.pallets + amt);
     document.getElementById('record-pallets').textContent = state.newRecordData.pallets;
@@ -282,6 +293,14 @@ export function resetWizard() {
     document.getElementById('record-quantity').textContent = '1';
     document.getElementById('summary-pallets').textContent = '1';
     document.getElementById('record-pallets').textContent = '1';
+    const uprCartContainer = document.getElementById('upr-cart-pieces-container');
+    if (uprCartContainer) uprCartContainer.classList.add('hidden');
+    const summaryCartRow = document.getElementById('summary-cart-defect-row');
+    if (summaryCartRow) summaryCartRow.classList.add('hidden');
+    const numEl = document.getElementById('record-cart-defect-pieces');
+    if (numEl) numEl.textContent = '0 (Todos)';
+    const sumEl = document.getElementById('summary-cart-defect-pieces');
+    if (sumEl) sumEl.textContent = 'Sin especificar';
     renderPhotoPreviews();
     document.getElementById('step-1').scrollIntoView({ behavior: 'auto' });
     

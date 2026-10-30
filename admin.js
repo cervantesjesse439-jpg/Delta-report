@@ -1,12 +1,11 @@
-// js/modules/admin.js
-import { CORRECT_PIN } from "./config.js";
+// admin.js - Automotriz
 import { state } from "./state.js";
 import { showNotification, markAsSynced, updateSyncStatusUI } from "./utils.js";
-import { db, setDoc, deleteDoc, doc, adminConfigDocRef } from "./firebase.js";
-import { syncApprovalModalState } from "./approvals.js";
+import { db, setDoc, deleteDoc, doc, adminConfigDocRef, adminsRef } from "./firebase.js";
+import { syncTrashUI } from "./trash.js";
 
 export function checkFirstTimeAdmin() {
-    const hasPrompted = localStorage.getItem('delta_prompted_admin');
+    const hasPrompted = localStorage.getItem('delta_auto_prompted_admin');
     if (!hasPrompted && !state.isAdmin) {
         document.getElementById('admin-onboarding-modal').classList.remove('hidden');
         document.getElementById('admin-onboarding-modal').classList.add('flex');
@@ -26,7 +25,7 @@ export function updateAdminUI() {
     if (lblBtnAdmin) {
         lblBtnAdmin.textContent = `Admin (${state.allAdmins.length}/${state.maxAdminSlots})`;
     }
-    syncApprovalModalState();
+    syncTrashUI();
 }
 
 export function renderAdminModalContent() {
@@ -97,19 +96,20 @@ export function renderAdminModalContent() {
 }
 
 export function skipAdminOnboarding() {
-    localStorage.setItem('delta_prompted_admin', 'true');
+    localStorage.setItem('delta_auto_prompted_admin', 'true');
     document.getElementById('admin-onboarding-modal').classList.add('hidden');
     document.getElementById('admin-onboarding-modal').classList.remove('flex');
 }
 
 export function startAdminRegistration() {
-    localStorage.setItem('delta_prompted_admin', 'true');
+    localStorage.setItem('delta_auto_prompted_admin', 'true');
     document.getElementById('admin-onboarding-modal').classList.add('hidden');
     document.getElementById('admin-onboarding-modal').classList.remove('flex');
     
     cancelRemoveAdmin(); 
     cancelChangeAdminSlots();
-    document.getElementById('admin-name-input').value = state.adminSavedName || localStorage.getItem('delta_last_name') || '';
+    cancelChangePinView();
+    document.getElementById('admin-name-input').value = state.adminSavedName || localStorage.getItem('delta_auto_last_name') || '';
     document.getElementById('pin-input').value = '';
     renderAdminModalContent();
 
@@ -152,7 +152,7 @@ export function cancelChangeAdminSlots() {
 
 export async function confirmChangeAdminSlots() {
     const pinVal = document.getElementById('admin-slots-pin-input').value.trim();
-    if (pinVal !== CORRECT_PIN) return showNotification("PIN incorrecto.");
+    if (pinVal !== state.currentPin) return showNotification("PIN incorrecto.");
     if (!state.pendingSlotChangeDelta) return;
 
     const newMax = state.maxAdminSlots + state.pendingSlotChangeDelta;
@@ -174,6 +174,53 @@ export async function confirmChangeAdminSlots() {
     } catch (e) {
         console.error(e); 
         showNotification("Error al actualizar los espacios.");
+    }
+}
+
+// --- CAMBIO DE PIN ---
+export function openChangePinView() {
+    document.getElementById('admin-main-view').classList.add('hidden');
+    document.getElementById('admin-main-view').classList.remove('flex');
+    document.getElementById('admin-change-pin-view').classList.remove('hidden');
+    document.getElementById('admin-change-pin-view').classList.add('flex');
+    document.getElementById('pin-change-current').value = '';
+    document.getElementById('pin-change-new').value = '';
+    document.getElementById('pin-change-confirm').value = '';
+}
+
+export function cancelChangePinView() {
+    const v = document.getElementById('admin-change-pin-view');
+    if (v) {
+        v.classList.add('hidden');
+        v.classList.remove('flex');
+    }
+    const mv = document.getElementById('admin-main-view');
+    if (mv) {
+        mv.classList.remove('hidden');
+        mv.classList.add('flex');
+    }
+}
+
+export async function confirmChangePin() {
+    const cur = document.getElementById('pin-change-current').value.trim();
+    const np = document.getElementById('pin-change-new').value.trim();
+    const conf = document.getElementById('pin-change-confirm').value.trim();
+
+    if (cur !== state.currentPin) return showNotification("El PIN actual es incorrecto.");
+    if (np.length !== 4 || isNaN(np)) return showNotification("El nuevo PIN debe tener exactamente 4 dígitos numéricos.");
+    if (np !== conf) return showNotification("La confirmación del nuevo PIN no coincide.");
+
+    try {
+        state.syncState = 'syncing';
+        updateSyncStatusUI();
+        await setDoc(adminConfigDocRef, { pin: np, updatedAt: Date.now() }, { merge: true });
+        state.currentPin = np;
+        markAsSynced();
+        showNotification("¡PIN de seguridad actualizado con éxito!");
+        cancelChangePinView();
+    } catch(e) {
+        console.error(e);
+        showNotification("Error al cambiar el PIN en el servidor.");
     }
 }
 
@@ -204,17 +251,17 @@ export function cancelRemoveAdmin() {
 
 export async function confirmRemoveAdmin() {
     const pinVal = document.getElementById('admin-delete-pin-input').value.trim();
-    if (pinVal !== CORRECT_PIN) return showNotification("PIN incorrecto.");
+    if (pinVal !== state.currentPin) return showNotification("PIN incorrecto.");
     if (!state.targetAdminToRemove) return;
 
     try {
         state.syncState = 'syncing'; 
         updateSyncStatusUI();
-        await deleteDoc(doc(db, 'delta_admins', state.targetAdminToRemove));
+        await deleteDoc(doc(adminsRef, state.targetAdminToRemove));
         markAsSynced();
         if (state.targetAdminToRemove === state.deviceUuid) {
             state.isAdmin = false;
-            localStorage.setItem('delta_is_admin', 'false');
+            localStorage.setItem('delta_auto_is_admin', 'false');
             showNotification("Te has dado de baja como Administrador.");
         } else { 
             showNotification("Dispositivo administrador eliminado."); 
@@ -231,7 +278,7 @@ export async function verifyAndRegisterAdmin() {
     const pinVal = document.getElementById('pin-input').value.trim();
     
     if (!adminName) return showNotification("Ingresa el nombre del administrador.");
-    if (pinVal !== CORRECT_PIN) return showNotification("PIN incorrecto.");
+    if (pinVal !== state.currentPin) return showNotification("PIN incorrecto.");
 
     try {
         const alreadyRegistered = state.allAdmins.some(a => a.id === state.deviceUuid);
@@ -241,15 +288,15 @@ export async function verifyAndRegisterAdmin() {
 
         state.syncState = 'syncing'; 
         updateSyncStatusUI();
-        const adminDocRef = doc(db, 'delta_admins', state.deviceUuid);
+        const adminDocRef = doc(adminsRef, state.deviceUuid);
         await setDoc(adminDocRef, { name: adminName, registeredAt: Date.now(), uuid: state.deviceUuid });
         markAsSynced();
         
         state.isAdmin = true;
         state.adminSavedName = adminName;
-        localStorage.setItem('delta_is_admin', 'true');
-        localStorage.setItem('delta_admin_name', adminName);
-        localStorage.setItem('delta_last_name', adminName);
+        localStorage.setItem('delta_auto_is_admin', 'true');
+        localStorage.setItem('delta_auto_admin_name', adminName);
+        localStorage.setItem('delta_auto_last_name', adminName);
         
         document.getElementById('pin-input').value = '';
         showNotification(`¡Bienvenido, ${adminName}! Este dispositivo ahora es Administrador.`);

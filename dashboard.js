@@ -1,7 +1,7 @@
-// js/modules/dashboard.js
+// dashboard.js - Automotriz
 import { state, getFilteredRecords } from "./state.js";
 import { showNotification, getLocalDateString, formatTimeShort, markAsSynced, updateSyncStatusUI } from "./utils.js";
-import { db, rechazosRef, approvalsRef, addDoc, doc, setDoc, onSnapshot, chunksRef, query, where, getDocs } from "./firebase.js";
+import { db, rechazosRef, trashRef, asignacionesRef, addDoc, doc, setDoc, onSnapshot, chunksRef, query, where, getDocs, deleteDoc } from "./firebase.js";
 import { getImageLocally, saveImageLocally, resizeImageAndConvert, uploadChunksInBackground } from "./indexeddb.js";
 
 export function updateDashboard() {
@@ -85,11 +85,15 @@ export function renderBitacora() {
         
         const sideColor = r.side === 'RH' ? 'text-blue-700 bg-blue-100/80 border-blue-200' : (r.side === 'LH' ? 'text-green-700 bg-green-100/80 border-green-200' : 'text-gray-700 bg-gray-100/80 border-gray-200');
         const qtyText = (r.quantity > 1) ? `<span class="bg-gray-900 text-white text-[10px] font-bold px-2 py-0.5 rounded-md ml-1 shadow-sm">${r.quantity} ${r.type}</span>` : '';
+        const cartDefectBadge = (r.cartDefectPieces > 0) ? `<span class="bg-blue-100 text-blue-800 border border-blue-300 text-[10px] font-bold px-2 py-0.5 rounded-md ml-1 shadow-sm">~${r.cartDefectPieces}/50 pzs con defecto</span>` : '';
         const palletText = (state.currentPiece === 'COVER' && r.pallets) ? `<span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-md ml-1 border border-emerald-300">${r.pallets} Tarimas</span>` : '';
         const isSelected = state.selectedForDeletion.has(r.id);
         
         const variantSpan = (r.variant && r.variant !== 'N/A') ? `<span class="bg-black/5 border border-white px-2 py-0.5 rounded-md text-gray-800 font-bold">${r.variant}</span>` : '';
-        const inspectorStr = r.inspectorName ? `<span class="text-[9px] text-gray-500 block font-bold"><i class="fas fa-user mr-0.5"></i> ${r.inspectorName.substring(0, 15)}</span>` : `<span class="text-[9px] text-gray-400 block font-bold">Sin asignar</span>`;
+        
+        // VINCULACIÓN DINÁMICA DEL INSPECTOR
+        const activeInsp = r.inspectorName || state.dailyInspectors[`${r.dateString}_${r.pieceType || 'UPR'}`] || 'Sin asignar';
+        const inspectorStr = `<span class="text-[9px] text-gray-500 block font-bold"><i class="fas fa-user mr-0.5"></i> ${activeInsp.substring(0, 15)}</span>`;
 
         let damageIcon = isTarimasOK ? 'fa-check-double' : 'fa-exclamation-triangle';
         let damageStyle = isTarimasOK ? 'text-green-700 bg-green-100/90 border-green-200' : 'text-red-700 bg-red-100/90 border-red-200';
@@ -119,7 +123,7 @@ export function renderBitacora() {
             <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 shadow-inner border border-white ${iconClass.split(' ').slice(1).join(' ')}"><i class="fas ${iconClass.split(' ')[0]} text-lg"></i></div>
             <div class="flex-1 overflow-hidden ml-1">
                 <div class="flex justify-between items-start">
-                    <p class="font-black text-gray-900 text-sm drop-shadow-sm">${r.type} ${qtyText} ${palletText}</p>
+                    <p class="font-black text-gray-900 text-sm drop-shadow-sm">${r.type} ${qtyText} ${cartDefectBadge} ${palletText}</p>
                     <div class="text-[10px] text-gray-600 font-bold text-right leading-tight">${formatTimeShort(r.timestamp)}${inspectorStr}</div>
                 </div>
                 <p class="text-xs flex flex-wrap gap-1.5 mt-2">
@@ -137,10 +141,11 @@ export function renderBitacora() {
 export async function checkDailyInspector() {
     if (state.unsubscribeInspector) state.unsubscribeInspector();
     const docId = `${getLocalDateString()}_${state.currentPiece}`;
-    const docRef = doc(db, 'asignaciones_delta', docId);
+    const docRef = doc(asignacionesRef, docId);
     state.unsubscribeInspector = onSnapshot(docRef, (docSnap) => {
         if (docSnap.exists()) {
             state.inspectorName = docSnap.data().inspectorName;
+            state.dailyInspectors[docId] = state.inspectorName;
             document.getElementById('current-inspector-display').textContent = state.inspectorName;
         } else {
             if (state.isAdmin && state.adminSavedName) {
@@ -152,14 +157,35 @@ export async function checkDailyInspector() {
                 openInspectorModal(); 
             }
         }
+        updateDashboard();
+        renderBitacora();
     });
 }
 
 export function openInspectorModal() {
-    document.getElementById('inspector-name-input').value = localStorage.getItem('delta_last_name') || '';
-    document.getElementById('inspector-modal-desc').textContent = `Ingresa tu nombre para ser el inspector oficial de ${state.currentPiece} hoy.`;
-    document.getElementById('inspector-name-modal').classList.remove('hidden');
-    document.getElementById('inspector-name-modal').classList.add('flex');
+    const modal = document.getElementById('inspector-name-modal');
+    if (!modal) return;
+
+    const profileSec = document.getElementById('inspector-profile-active-section');
+    const manualSec = document.getElementById('inspector-manual-input-section');
+
+    if (state.currentProfile) {
+        if (profileSec) profileSec.classList.remove('hidden');
+        if (manualSec) manualSec.classList.add('hidden');
+        const nameEl = document.getElementById('inspector-active-profile-name');
+        if (nameEl) nameEl.textContent = state.currentProfile.name;
+    } else {
+        if (profileSec) profileSec.classList.add('hidden');
+        if (manualSec) manualSec.classList.remove('hidden');
+        const inp = document.getElementById('inspector-name-input');
+        if (inp) inp.value = localStorage.getItem('delta_auto_last_name') || '';
+    }
+
+    const descEl = document.getElementById('inspector-modal-desc');
+    if (descEl) descEl.textContent = `Asignación oficial para la línea ${state.currentPiece} hoy.`;
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
 }
 
 export function closeInspectorModal() {
@@ -171,17 +197,35 @@ export async function saveInspectorName() {
     const name = document.getElementById('inspector-name-input').value.trim();
     if (!name) return showNotification("Por favor, ingresa tu nombre.");
     
-    localStorage.setItem('delta_last_name', name);
+    localStorage.setItem('delta_auto_last_name', name);
     
-    const docId = `${getLocalDateString()}_${state.currentPiece}`;
-    const docRef = doc(db, 'asignaciones_delta', docId);
+    const todayStr = getLocalDateString();
+    const docId = `${todayStr}_${state.currentPiece}`;
+    const docRef = doc(asignacionesRef, docId);
 
     try {
         state.syncState = 'syncing'; 
         updateSyncStatusUI();
+        
+        // 1. Guardar asignación del día y pieza
         await setDoc(docRef, { inspectorName: name, timestamp: Date.now() });
+        state.inspectorName = name;
+        state.dailyInspectors[docId] = name;
+
+        // 2. Vinculación en cascada: Actualizar todos los registros existentes de este día y pieza en Firestore
+        const q = query(rechazosRef, where("dateString", "==", todayStr), where("pieceType", "==", state.currentPiece));
+        const snap = await getDocs(q);
+        const updatePromises = [];
+        snap.forEach(d => {
+            updatePromises.push(setDoc(doc(rechazosRef, d.id), { inspectorName: name }, { merge: true }));
+        });
+        await Promise.all(updatePromises);
+
         markAsSynced();
         closeInspectorModal();
+        updateDashboard();
+        renderBitacora();
+        showNotification(`¡Asignado! Todos los rechazos de hoy en ${state.currentPiece} están ahora vinculados a ti.`);
     } catch(e) { 
         console.error(e); 
         showNotification("Error al guardar el inspector."); 
@@ -387,6 +431,7 @@ export async function duplicateRecord(id) {
     }
 }
 
+// --- ELIMINACIÓN DIRECTA ÁGIL (SIN PIN) + ENVIAR A PAPELERA ---
 export function toggleDeleteMode() {
     state.isDeleteMode = !state.isDeleteMode; 
     state.selectedForDeletion.clear();
@@ -405,7 +450,7 @@ export function toggleRecordSelection(id) {
 
 export function updateDeleteButton() {
     const b = document.getElementById('btn-confirm-delete');
-    b.innerHTML = `<i class="fas fa-paper-plane"></i> Solicitar Borrado (${state.selectedForDeletion.size})`;
+    b.innerHTML = `<i class="fas fa-trash-alt mr-1"></i> Eliminar (${state.selectedForDeletion.size})`;
     if (state.selectedForDeletion.size > 0) b.classList.remove('opacity-50', 'pointer-events-none');
     else b.classList.add('opacity-50', 'pointer-events-none');
 }
@@ -416,26 +461,39 @@ export async function requestDeletion() {
     const itemsToDelete = [];
     state.selectedForDeletion.forEach(id => {
         const rec = state.allRecords.find(x => x.id === id);
-        if (rec) itemsToDelete.push({ 
-            id: rec.id, 
-            pieceType: rec.pieceType || state.currentPiece, 
-            type: rec.type, 
-            damage: rec.damage, 
-            side: rec.side || 'N/A', 
-            quantity: rec.quantity || 1 
-        });
+        if (rec) itemsToDelete.push({ ...rec, originalId: rec.id });
     });
     if (itemsToDelete.length === 0) return;
+
+    if (!confirm(`¿Eliminar ${itemsToDelete.length} reporte(s)? Se moverán a la papelera donde un administrador puede restaurarlos si fue un error.`)) {
+        return;
+    }
 
     try {
         state.syncState = 'syncing'; 
         updateSyncStatusUI();
-        await addDoc(approvalsRef, { items: itemsToDelete, status: 'pending', timestamp: Date.now() });
+
+        // 1. Registrar en la papelera / bitácora de cambios
+        await addDoc(trashRef, {
+            deletedAt: Date.now(),
+            dateString: getLocalDateString(),
+            deletedByDevice: state.deviceUuid,
+            inspectorAtDeletion: state.inspectorName || 'Desconocido',
+            pieceType: state.currentPiece,
+            items: itemsToDelete,
+            totalItems: itemsToDelete.length
+        });
+
+        // 2. Eliminar de la colección activa
+        for (const item of itemsToDelete) {
+            await deleteDoc(doc(rechazosRef, item.id));
+        }
+
         markAsSynced();
-        showNotification("¡Solicitud enviada! Se eliminarán cuando un administrador lo apruebe.");
+        showNotification(`¡${itemsToDelete.length} reporte(s) eliminado(s)! Puedes restaurarlos desde la Papelera.`);
         toggleDeleteMode();
     } catch(e) { 
         console.error(e); 
-        showNotification("Error al enviar la solicitud de borrado."); 
+        showNotification("Error al eliminar los reportes."); 
     }
 }
