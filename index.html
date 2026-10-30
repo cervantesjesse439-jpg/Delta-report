@@ -525,6 +525,44 @@
         </div>
     </div>
 
+    
+    <!-- Modal Editor / Anotación de Fotos (Rayar en Negro) -->
+    <div id="photo-editor-modal" class="fixed inset-0 bg-black/90 backdrop-blur-xl z-[250] hidden flex-col items-center justify-between p-3 fade-in select-none">
+        <div class="w-full max-w-lg flex items-center justify-between p-3 bg-white/10 rounded-2xl border border-white/15 backdrop-blur-md mb-2">
+            <div class="flex items-center gap-2.5 text-white">
+                <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-sm shadow-sm"><i class="fas fa-pencil-alt text-amber-300"></i></div>
+                <div>
+                    <span class="font-black text-sm block">Señalar Defecto</span>
+                    <span class="text-[10px] text-gray-300">Dibuja en negro sobre la zona dañada</span>
+                </div>
+            </div>
+            <button onclick="closePhotoEditor()" class="w-8 h-8 rounded-full bg-white/20 text-white flex items-center justify-center hover:bg-white/30 transition active:scale-95"><i class="fas fa-times"></i></button>
+        </div>
+
+        <div id="canvas-wrapper" class="flex-1 w-full max-w-lg flex items-center justify-center overflow-hidden relative rounded-2xl bg-black/40 border border-white/10 shadow-2xl p-1">
+            <canvas id="photo-annotation-canvas" class="max-w-full max-h-[68vh] rounded-xl shadow-lg cursor-crosshair touch-none"></canvas>
+        </div>
+
+        <div class="w-full max-w-lg flex flex-col gap-2 mt-2 p-3 bg-white/10 rounded-2xl border border-white/15 backdrop-blur-md">
+            <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-1.5 bg-black/40 p-1 rounded-xl border border-white/10">
+                    <span class="text-[9px] text-gray-400 font-bold px-1.5 uppercase">Grosor:</span>
+                    <button type="button" onclick="setBrushSize(3)" id="brush-size-3" class="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold transition hover:bg-white/20 active:scale-95" title="Fino"><i class="fas fa-circle text-[5px]"></i></button>
+                    <button type="button" onclick="setBrushSize(6)" id="brush-size-6" class="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold bg-white/30 transition hover:bg-white/20 active:scale-95 shadow" title="Medio"><i class="fas fa-circle text-[9px]"></i></button>
+                    <button type="button" onclick="setBrushSize(12)" id="brush-size-12" class="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold transition hover:bg-white/20 active:scale-95" title="Grueso"><i class="fas fa-circle text-[13px]"></i></button>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <button type="button" onclick="undoLastStroke()" class="px-2.5 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-bold text-xs transition active:scale-95 flex items-center gap-1"><i class="fas fa-undo"></i> Deshacer</button>
+                    <button type="button" onclick="clearAllStrokes()" class="px-2.5 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-bold text-xs transition active:scale-95 flex items-center gap-1"><i class="fas fa-eraser"></i> Limpiar</button>
+                </div>
+            </div>
+            <div class="flex gap-2 w-full mt-0.5">
+                <button type="button" onclick="closePhotoEditor()" class="flex-1 py-2.5 bg-gray-200/80 hover:bg-gray-200 text-gray-800 font-bold rounded-xl transition active:scale-95 text-xs">Cancelar</button>
+                <button type="button" onclick="savePhotoAnnotations()" class="flex-[2] py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition active:scale-95 text-xs shadow-lg flex items-center justify-center gap-1.5"><i class="fas fa-check"></i> Guardar Marcas en Foto</button>
+            </div>
+        </div>
+    </div>
+    
     <!-- Visor de Fotos Ampliado (Pantalla Completa) -->
     <div id="photo-viewer-modal" class="fixed inset-0 bg-black/95 backdrop-blur-2xl z-[300] hidden flex-col items-center justify-center fade-in p-4 cursor-pointer" onclick="closePhotoViewer()">
         <button onclick="closePhotoViewer()" class="absolute top-6 right-6 w-12 h-12 bg-white/20 rounded-full text-white flex items-center justify-center text-2xl hover:bg-white/30 backdrop-blur-md transition active:scale-95 border border-white/20 z-10">

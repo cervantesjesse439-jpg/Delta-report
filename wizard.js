@@ -234,10 +234,12 @@ export async function handlePhotos(e) {
 
 export function renderPhotoPreviews() {
     const c = document.getElementById('photo-preview-container');
+    if (!c) return;
     c.innerHTML = state.newRecordData.photos.map((p, i) => `
-        <div class="relative w-16 h-16 flex-shrink-0 rounded-xl overflow-hidden border-2 border-white shadow-sm">
-            <img src="${p.thumbnail}" class="w-full h-full object-cover cursor-pointer" onclick="openPhotoViewer('${p.id}', '${p.thumbnail}')">
-            <button onclick="removePhoto(${i})" class="absolute top-0 right-0 bg-red-500 text-white text-xs w-6 h-6 rounded-bl-lg shadow flex items-center justify-center"><i class="fas fa-times"></i></button>
+        <div class="relative w-16 h-16 flex-shrink-0 rounded-xl overflow-hidden border-2 border-white shadow-sm group">
+            <img src="${p.thumbnail}" class="w-full h-full object-cover cursor-pointer" onclick="openPhotoEditor(${i})" title="Toca para rayar / marcar daño">
+            <button type="button" onclick="event.stopPropagation(); removePhoto(${i})" class="absolute top-0 right-0 bg-red-500 hover:bg-red-600 text-white text-xs w-6 h-6 rounded-bl-lg shadow flex items-center justify-center transition active:scale-95" title="Eliminar foto"><i class="fas fa-times"></i></button>
+            <button type="button" onclick="event.stopPropagation(); openPhotoEditor(${i})" class="absolute bottom-0 right-0 bg-black/85 hover:bg-black text-amber-300 text-xs w-6 h-6 rounded-tl-lg shadow flex items-center justify-center transition active:scale-95" title="Rayar / marcar defecto"><i class="fas fa-pencil-alt"></i></button>
         </div>
     `).join('');
     

@@ -1,3 +1,12 @@
+
+import { 
+    openPhotoEditor, 
+    closePhotoEditor, 
+    setBrushSize, 
+    undoLastStroke, 
+    clearAllStrokes, 
+    savePhotoAnnotations 
+} from "./photo-editor.js";
 // app.js - Automotriz
 import { state } from "./state.js";
 import { formatDateToDisplay, getLocalDateString, updateSyncStatusUI, markAsSynced, manualSyncPulse, showNotification } from "./utils.js";
@@ -140,6 +149,15 @@ window.changeQuantity = changeQuantity;
 window.changePallets = changePallets;
 window.handlePhotos = handlePhotos;
 window.removePhoto = removePhoto;
+window.renderPhotoPreviews = renderPhotoPreviews;
+
+window.openPhotoEditor = openPhotoEditor;
+window.closePhotoEditor = closePhotoEditor;
+window.setBrushSize = setBrushSize;
+window.undoLastStroke = undoLastStroke;
+window.clearAllStrokes = clearAllStrokes;
+window.savePhotoAnnotations = savePhotoAnnotations;
+
 window.goToStep = goToStep;
 
 window.openInspectorModal = openInspectorModal;
